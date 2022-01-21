@@ -38,4 +38,4 @@ initialize is called for each plugin with a Registry which gives the plugin meth
 
 #### Defined in
 
-plugin/index.tsx:86
+[plugin/index.tsx:86](https://github.com/kinvolk/headlamp/blob/32b8f38/frontend/src/plugin/index.tsx#L86)

@@ -22,4 +22,4 @@ Load external, then local plugins. Then initialize() them in order with a Regist
 
 #### Defined in
 
-plugin/index.tsx:211
+[plugin/index.tsx:215](https://github.com/kinvolk/headlamp/blob/32b8f38/frontend/src/plugin/index.tsx#L215)
