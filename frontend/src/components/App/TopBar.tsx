@@ -19,6 +19,7 @@ import { useCluster } from '../../lib/k8s';
 import { setWhetherSidebarOpen } from '../../redux/actions/actions';
 import { useTypedSelector } from '../../redux/reducers/reducers';
 import { ClusterTitle } from '../cluster/Chooser';
+import Notifications from '../common/Notifications';
 import { drawerWidth } from '../Sidebar';
 import HeadlampButton from '../Sidebar/HeadlampButton';
 import ThemeChangeButton from './ThemeChangeButton';
@@ -210,6 +211,9 @@ export function PureTopBar({
         </MenuItem>
       ))}
       <MenuItem>
+        <Notifications />
+      </MenuItem>
+      <MenuItem>
         <LocaleSelect />
       </MenuItem>
       <MenuItem>
@@ -251,6 +255,7 @@ export function PureTopBar({
                   <React.Fragment key={i}>{action()}</React.Fragment>
                 </MenuItem>
               ))}
+              <Notifications />
               <LocaleSelect />
               <ThemeChangeButton />
               <IconButton
