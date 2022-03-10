@@ -50,6 +50,7 @@ describe('renders a detail view present in store', () => {
     theme: {
       name: '',
     },
+    notifications: [],
   };
   const mockStore = createStore(
     combineReducers({
