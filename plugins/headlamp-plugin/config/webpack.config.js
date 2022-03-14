@@ -10,6 +10,7 @@ const externalModules = {
   notistack: 'pluginLib.Notistack',
   '@kinvolk/headlamp-plugin/lib/CommonComponents': 'pluginLib.CommonComponents',
   '@kinvolk/headlamp-plugin/lib': 'pluginLib',
+  notification: 'pluginLib.Notification',
 };
 
 module.exports = {

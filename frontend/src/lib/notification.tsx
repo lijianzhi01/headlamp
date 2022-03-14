@@ -1,3 +1,4 @@
+import { UI_SET_NOTIFICATIONS } from '../redux/actions/actions';
 enum NotificationType {
   DIALOG = 1 << 0,
   SNACKBAR = 1 << 1,
@@ -27,3 +28,5 @@ export class Notification {
     this.id = btoa(`${this.date},${this.message}`);
   }
 }
+
+export const NotificationActionName = UI_SET_NOTIFICATIONS;
