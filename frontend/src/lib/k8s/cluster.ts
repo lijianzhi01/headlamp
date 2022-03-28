@@ -50,7 +50,7 @@ export interface KubeOwnerReference {
 }
 
 export interface ApiListOptions {
-  namespace?: string;
+  namespace?: string | string[];
 }
 
 // We have to define a KubeObject implementation here because the KubeObject
@@ -144,7 +144,9 @@ export function makeKubeObject<T extends KubeObjectInterface | KubeEvent>(
     static apiList<U extends KubeObject>(
       onList: (arg: U[]) => void,
       onError?: (err: ApiError) => void,
-      opts?: ApiListOptions
+      opts?: {
+        namespace?: string;
+      }
     ) {
       const createInstance = (item: T) => this.create(item) as U;
 
@@ -166,8 +168,48 @@ export function makeKubeObject<T extends KubeObjectInterface | KubeEvent>(
       onError?: (err: ApiError) => void,
       opts?: ApiListOptions
     ) {
+      const [objs, setObjs] = React.useState<{ [key: string]: U[] }>({});
       const listCallback = onList as (arg: U[]) => void;
-      useConnectApi(this.apiList(listCallback, onError, opts));
+
+      function onObjs(namespace: string, objList: U[]) {
+        if (objList.length > 0) {
+          let newObjs: typeof objs = {};
+          // Set the objects so we have them for the next API response...
+          setObjs(objs => {
+            newObjs = { ...objs, [namespace || '']: objList };
+            return newObjs;
+          });
+
+          let allObjs: U[] = [];
+          Object.values(newObjs).map(currentObjs => {
+            allObjs = allObjs.concat(currentObjs);
+          });
+
+          listCallback(allObjs);
+        }
+      }
+
+      const listCalls = [];
+      if (!!opts?.namespace) {
+        let namespaces: string[] = [];
+        if (typeof opts.namespace === 'string') {
+          namespaces = [opts.namespace];
+        } else {
+          namespaces = opts.namespace as string[];
+        }
+
+        for (const namespace of namespaces) {
+          listCalls.push(
+            this.apiList(objList => onObjs(namespace, objList as U[]), onError, { namespace })
+          );
+        }
+      } else {
+        // If we don't have a namespace set, then we only have one API call
+        // response to set and we return it right away.
+        listCalls.push(this.apiList(listCallback, onError));
+      }
+
+      useConnectApi(...listCalls);
     }
 
     static useList<U extends KubeObject>(
