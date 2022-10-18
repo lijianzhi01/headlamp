@@ -1,64 +1,356 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Modules on Headlamp</title>
-    <link>https://kinvolk.github.io/headlamp/docs/latest/development/api/modules/</link>
-    <description>Recent content in Modules on Headlamp</description>
+    <title>Namespaces on Headlamp</title>
+    <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/</link>
+    <description>Recent content in Namespaces on Headlamp</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <copyright>Copyright the Headlamp project contributors</copyright><atom:link href="https://kinvolk.github.io/headlamp/docs/latest/development/api/modules/index.xml" rel="self" type="application/rss+xml" />
+    <copyright>Copyright the Headlamp project contributors</copyright><atom:link href="https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>Module: lib/k8s</title>
-      <link>https://kinvolk.github.io/headlamp/docs/latest/development/api/modules/lib_k8s/</link>
+      <title>Namespace: auth</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_util.auth/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>https://kinvolk.github.io/headlamp/docs/latest/development/api/modules/lib_k8s/</guid>
-      <description>Variables ResourceClasses • ResourceClasses: Object = resourceClassesDict
-Index signature ▪ [className: string]: KubeObject
-Defined in  lib/k8s/index.ts:73 Functions getVersion ▸ getVersion(): Promise&amp;lt;StringDict&amp;gt;
-Returns Promise&amp;lt;StringDict&amp;gt;
-Defined in  lib/k8s/index.ts:145  useCluster ▸ useCluster(): null | string
-Returns null | string
-Defined in  lib/k8s/index.ts:128  useClustersConf ▸ useClustersConf(): ConfigState[&amp;quot;clusters&amp;quot;]
-Returns ConfigState[&amp;quot;clusters&amp;quot;]
-Defined in  lib/k8s/index.ts:80  useConnectApi ▸ useConnectApi(&amp;hellip;apiCalls): void
-Parameters    Name Type     ...apiCalls () =&amp;gt; CancellablePromise[]    Returns void</description>
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_util.auth/</guid>
+      <description>lib/util .auth
+Functions deleteTokens ▸ deleteTokens(): void
+Returns void
+Defined in  lib/auth.ts:28  getToken ▸ getToken(cluster): any
+Parameters    Name Type     cluster string    Returns any
+Defined in  lib/auth.ts:5  getUserInfo ▸ getUserInfo(cluster): any
+Parameters    Name Type     cluster string    Returns any
+Defined in  lib/auth.ts:9  hasToken ▸ hasToken(cluster): boolean</description>
+    </item>
+    
+    <item>
+      <title>Module: lib/k8s</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s/</guid>
+      <description>References cluster Renames and re-exports lib/k8s/cluster  clusterRole Renames and re-exports lib/k8s/clusterRole  clusterRoleBinding Renames and re-exports lib/k8s/clusterRoleBinding  configMap Renames and re-exports lib/k8s/configMap  crd Renames and re-exports lib/k8s/crd  cronJob Renames and re-exports lib/k8s/cronJob  daemonSet Renames and re-exports lib/k8s/daemonSet  deployment Renames and re-exports lib/k8s/deployment  event Renames and re-exports lib/k8s/event  ingress Renames and re-exports lib/k8s/ingress  job Renames and re-exports lib/k8s/job  namespace Renames and re-exports lib/k8s/namespace  node Renames and re-exports lib/k8s/node  persistentVolume Renames and re-exports lib/k8s/persistentVolume  persistentVolumeClaim Renames and re-exports lib/k8s/persistentVolumeClaim  pod Renames and re-exports lib/k8s/pod  replicaSet Renames and re-exports lib/k8s/replicaSet  role Renames and re-exports lib/k8s/role  roleBinding Renames and re-exports lib/k8s/roleBinding  secret Renames and re-exports lib/k8s/secret  service Renames and re-exports lib/k8s/service  serviceAccount Renames and re-exports lib/k8s/serviceAccount  statefulSet Renames and re-exports lib/k8s/statefulSet  storageClass Renames and re-exports lib/k8s/storageClass Type aliases CancellablePromise Ƭ CancellablePromise: Promise&amp;lt;() =&amp;gt; void&amp;gt;</description>
+    </item>
+    
+    <item>
+      <title>Module: lib/k8s/apiProxy</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_apiproxy/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_apiproxy/</guid>
+      <description>Interfaces   ApiError   ClusterRequest   RequestParams   StreamArgs   Type aliases StreamErrCb Ƭ StreamErrCb: (err: Error &amp;amp; { status?: number }, cancelStreamFunc?: () =&amp;gt; void) =&amp;gt; void
+Type declaration ▸ (err, cancelStreamFunc?): void
+Parameters    Name Type     err Error &amp;amp; { status?: number }   cancelStreamFunc? () =&amp;gt; void    Returns void
+Defined in  lib/k8s/apiProxy.</description>
+    </item>
+    
+    <item>
+      <title>Module: lib/k8s/cluster</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_cluster/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_cluster/</guid>
+      <description>References ApiListOptions Re-exports ApiListOptions  Cluster Re-exports Cluster  KubeCondition Re-exports KubeCondition  KubeContainer Re-exports KubeContainer  KubeContainerProbe Re-exports KubeContainerProbe  KubeContainerStatus Re-exports KubeContainerStatus  KubeMetadata Re-exports KubeMetadata  KubeMetrics Re-exports KubeMetrics  KubeObject Re-exports KubeObject  KubeObjectClass Re-exports KubeObjectClass  KubeObjectIface Re-exports KubeObjectIface  KubeObjectInterface Re-exports KubeObjectInterface  KubeOwnerReference Re-exports KubeOwnerReference  LabelSelector Re-exports LabelSelector  StringDict Re-exports StringDict  Workload Re-exports Workload  makeKubeObject Re-exports makeKubeObject </description>
+    </item>
+    
+    <item>
+      <title>Module: lib/k8s/clusterRole</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_clusterrole/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_clusterrole/</guid>
+      <description>Classes   ClusterRole   </description>
+    </item>
+    
+    <item>
+      <title>Module: lib/k8s/clusterRoleBinding</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_clusterrolebinding/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_clusterrolebinding/</guid>
+      <description>Classes   ClusterRoleBinding   </description>
+    </item>
+    
+    <item>
+      <title>Module: lib/k8s/configMap</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_configmap/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_configmap/</guid>
+      <description>Classes   ConfigMap   Interfaces   KubeConfigMap   </description>
+    </item>
+    
+    <item>
+      <title>Module: lib/k8s/crd</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_crd/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_crd/</guid>
+      <description>Classes   CustomResourceDefinition   Interfaces   KubeCRD   Functions makeCustomResourceClass ▸ makeCustomResourceClass(args, isNamespaced): any
+Parameters    Name Type     args [group: string, version: string, pluralName: string][]   isNamespaced boolean    Returns any
+Defined in  lib/k8s/crd.ts:56 </description>
+    </item>
+    
+    <item>
+      <title>Module: lib/k8s/cronJob</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_cronjob/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_cronjob/</guid>
+      <description>Classes   CronJob   Interfaces   KubeCronJob   </description>
+    </item>
+    
+    <item>
+      <title>Module: lib/k8s/daemonSet</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_daemonset/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_daemonset/</guid>
+      <description>Classes   DaemonSet   Interfaces   KubeDaemonSet   </description>
+    </item>
+    
+    <item>
+      <title>Module: lib/k8s/deployment</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_deployment/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_deployment/</guid>
+      <description>Classes   Deployment   Interfaces   KubeDeployment   </description>
+    </item>
+    
+    <item>
+      <title>Module: lib/k8s/event</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_event/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_event/</guid>
+      <description>Classes   Event   Interfaces   KubeEvent   </description>
+    </item>
+    
+    <item>
+      <title>Module: lib/k8s/ingress</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_ingress/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_ingress/</guid>
+      <description>Classes   Ingress   Interfaces   KubeIngress   </description>
+    </item>
+    
+    <item>
+      <title>Module: lib/k8s/job</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_job/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_job/</guid>
+      <description>Classes   Job   Interfaces   KubeJob   </description>
+    </item>
+    
+    <item>
+      <title>Module: lib/k8s/namespace</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_namespace/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_namespace/</guid>
+      <description>Classes   Namespace   Interfaces   KubeNamespace   </description>
+    </item>
+    
+    <item>
+      <title>Module: lib/k8s/networkpolicy</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_networkpolicy/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_networkpolicy/</guid>
+      <description>Classes   NetworkPolicy   Interfaces   KubeNetworkPolicy   </description>
+    </item>
+    
+    <item>
+      <title>Module: lib/k8s/node</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_node/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_node/</guid>
+      <description>Classes   Node   Interfaces   KubeNode   </description>
+    </item>
+    
+    <item>
+      <title>Module: lib/k8s/persistentVolume</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_persistentvolume/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_persistentvolume/</guid>
+      <description>Classes   PersistentVolume   Interfaces   KubePersistentVolume   </description>
+    </item>
+    
+    <item>
+      <title>Module: lib/k8s/persistentVolumeClaim</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_persistentvolumeclaim/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_persistentvolumeclaim/</guid>
+      <description>Classes   PersistentVolumeClaim   Interfaces   KubePersistentVolumeClaim   </description>
+    </item>
+    
+    <item>
+      <title>Module: lib/k8s/pod</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_pod/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_pod/</guid>
+      <description>Classes   Pod   Interfaces   ExecOptions   KubePod   </description>
+    </item>
+    
+    <item>
+      <title>Module: lib/k8s/replicaSet</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_replicaset/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_replicaset/</guid>
+      <description>Classes   ReplicaSet   Interfaces   KubeReplicaSet   </description>
+    </item>
+    
+    <item>
+      <title>Module: lib/k8s/role</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_role/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_role/</guid>
+      <description>Classes   Role   Interfaces   KubeRole   </description>
+    </item>
+    
+    <item>
+      <title>Module: lib/k8s/roleBinding</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_rolebinding/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_rolebinding/</guid>
+      <description>Classes   RoleBinding   Interfaces   KubeRoleBinding   </description>
+    </item>
+    
+    <item>
+      <title>Module: lib/k8s/secret</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_secret/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_secret/</guid>
+      <description>Classes   Secret   Interfaces   KubeSecret   </description>
+    </item>
+    
+    <item>
+      <title>Module: lib/k8s/service</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_service/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_service/</guid>
+      <description>Classes   Service   Interfaces   KubeLoadBalancerIngress   KubePortStatus   KubeService   </description>
+    </item>
+    
+    <item>
+      <title>Module: lib/k8s/serviceAccount</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_serviceaccount/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_serviceaccount/</guid>
+      <description>Classes   ServiceAccount   Interfaces   KubeServiceAccount   </description>
+    </item>
+    
+    <item>
+      <title>Module: lib/k8s/statefulSet</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_statefulset/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_statefulset/</guid>
+      <description>Classes   StatefulSet   Interfaces   KubeStatefulSet   </description>
+    </item>
+    
+    <item>
+      <title>Module: lib/k8s/storageClass</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_storageclass/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_storageclass/</guid>
+      <description>Classes   StorageClass   Interfaces   KubeStorageClass   </description>
+    </item>
+    
+    <item>
+      <title>Module: lib/k8s/token</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_token/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_k8s_token/</guid>
+      <description>Interfaces   KubeToken   </description>
+    </item>
+    
+    <item>
+      <title>Module: lib/router</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_router/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_router/</guid>
+      <description>Interfaces   Route   RouteURLProps   Variables NotFoundRoute • Const NotFoundRoute: Object
+Type declaration    Name Type     component () =&amp;gt; Element   exact boolean   name string   noAuthRequired boolean   path string   sidebar null    Defined in  lib/router.tsx:438 Functions createRouteURL ▸ createRouteURL(routeName, params?): string
+Parameters    Name Type     routeName string   params RouteURLProps     Returns string</description>
     </item>
     
     <item>
       <title>Module: lib/util</title>
-      <link>https://kinvolk.github.io/headlamp/docs/latest/development/api/modules/lib_util/</link>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_util/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>https://kinvolk.github.io/headlamp/docs/latest/development/api/modules/lib_util/</guid>
-      <description>Interfaces   FilterState   Variables CLUSTER_ACTION_GRACE_PERIOD • CLUSTER_ACTION_GRACE_PERIOD: 5000
-Defined in  lib/util.ts:18 Functions filterResource ▸ filterResource(item, filter, matchCriteria?): boolean
-Parameters    Name Type     item KubeObjectInterface   filter FilterState    matchCriteria? string[]    Returns boolean
-Defined in  lib/util.ts:85  getCluster ▸ getCluster(): string | null
-Returns string | null
-Defined in  lib/util.ts:153  getClusterPrefixedPath ▸ getClusterPrefixedPath(path?</description>
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_util/</guid>
+      <description>Namespaces   auth   units   Interfaces   FilterState   TimeAgoOptions   Type aliases DateFormatOptions Ƭ DateFormatOptions: &amp;quot;brief&amp;quot; | &amp;quot;mini&amp;quot;
+Defined in  lib/util.ts:30  DateParam Ƭ DateParam: string | number | Date
+Defined in  lib/util.ts:28 Variables CLUSTER_ACTION_GRACE_PERIOD • Const CLUSTER_ACTION_GRACE_PERIOD: 5000
+Defined in  lib/util.ts:26 Functions filterResource ▸ filterResource(item, filter, matchCriteria?): boolean
+Parameters    Name Type     item KubeObjectInterface    filter FilterState    matchCriteria?</description>
     </item>
     
     <item>
       <title>Module: plugin/lib</title>
-      <link>https://kinvolk.github.io/headlamp/docs/latest/development/api/modules/plugin_lib/</link>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/plugin_lib/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>https://kinvolk.github.io/headlamp/docs/latest/development/api/modules/plugin_lib/</guid>
-      <description>The lib.ts file should carry the bits to be used by plugins whereas the index.ts should have the functions that Headlamp itself needs for loading the plugins.
-Classes   Headlamp   Plugin   </description>
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/plugin_lib/</guid>
+      <description>Classes   Headlamp   Plugin   Interfaces   AppMenu   </description>
     </item>
     
     <item>
       <title>Module: plugin/registry</title>
-      <link>https://kinvolk.github.io/headlamp/docs/latest/development/api/modules/plugin_registry/</link>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/plugin_registry/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>https://kinvolk.github.io/headlamp/docs/latest/development/api/modules/plugin_registry/</guid>
-      <description>Classes   default   Type aliases sectionFunc Ƭ sectionFunc: (resource: KubeObject) =&amp;gt; SectionFuncProps | null | undefined
-Type declaration ▸ (resource): SectionFuncProps | null | undefined
-Parameters    Name Type     resource KubeObject    Returns SectionFuncProps | null | undefined
-Defined in  plugin/registry.tsx:17 </description>
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/plugin_registry/</guid>
+      <description>Classes   Registry   Interfaces   AppLogoProps   ClusterChooserProps   DetailsViewSectionProps   SectionFuncProps   SidebarEntryProps   Type aliases AppBarActionType Ƭ AppBarActionType: HeaderActionType
+Defined in  plugin/registry.tsx:45  AppLogoType Ƭ AppLogoType: React.ComponentType&amp;lt; AppLogoProps &amp;gt; | ReactElement | null
+Defined in  components/Sidebar/AppLogo.tsx:16  ClusterChooserType Ƭ ClusterChooserType: React.ComponentType&amp;lt; ClusterChooserProps &amp;gt; | ReactElement | null
+Defined in  components/cluster/ClusterChooser.tsx:10  DetailsViewHeaderActionType Ƭ DetailsViewHeaderActionType: HeaderActionType
+Defined in  plugin/registry.</description>
+    </item>
+    
+    <item>
+      <title>Module: redux/reducers/config</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/redux_reducers_config/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/redux_reducers_config/</guid>
+      <description>Interfaces   ConfigAction   ConfigState   Variables INITIAL_STATE • Const INITIAL_STATE: ConfigState Defined in  redux/reducers/config.tsx:11 Functions reducer ▸ reducer(state?, action): Object
+Parameters    Name Type     state ConfigState    action ConfigAction     Returns Object
+   Name Type     clusters null | { [clusterName: string]: Cluster ; }    Defined in  redux/reducers/config.</description>
+    </item>
+    
+    <item>
+      <title>Namespace: units</title>
+      <link>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_util.units/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://lijianzhi01.github.io/headlamp/docs/latest/development/api/modules/lib_util.units/</guid>
+      <description>lib/util .units
+Variables TO_GB • Const TO_GB: number
+Defined in  lib/units.ts:10  TO_ONE_CPU • Const TO_ONE_CPU: 1000000000
+Defined in  lib/units.ts:12  TO_ONE_M_CPU • Const TO_ONE_M_CPU: 1000000
+Defined in  lib/units.ts:11 Functions parseCpu ▸ parseCpu(value): number
+Parameters    Name Type     value string    Returns number
+Defined in  lib/units.ts:62  parseDiskSpace ▸ parseDiskSpace(value): number
+Parameters    Name Type     value string    Returns number</description>
     </item>
     
   </channel>
