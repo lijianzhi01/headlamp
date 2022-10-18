@@ -12,10 +12,9 @@ import Editor from '@monaco-editor/react';
 import { Base64 } from 'js-base64';
 import _ from 'lodash';
 import * as monaco from 'monaco-editor';
-import React, { PropsWithChildren } from 'react';
+import React, { isValidElement, PropsWithChildren } from 'react';
 import { useTranslation } from 'react-i18next';
 import { generatePath, Link as RouterLink, NavLinkProps, useLocation } from 'react-router-dom';
-import DetailsViewPluginRenderer from '../../../helpers/renderHelpers';
 import { ApiError } from '../../../lib/k8s/apiProxy';
 import {
   KubeCondition,
@@ -32,17 +31,20 @@ import Loader from '../../common/Loader';
 import { SectionBox } from '../../common/SectionBox';
 import SectionHeader, { HeaderStyleProps } from '../../common/SectionHeader';
 import SimpleTable, { NameValueTable, NameValueTableRow } from '../../common/SimpleTable';
+import DetailsViewSection from '../../DetailsViewSection';
 import { PodListProps, PodListRenderer } from '../../pod/List';
 import { LightTooltip } from '..';
 import Empty from '../EmptyContent';
-import { DateLabel, HoverInfoLabel, StatusLabel, StatusLabelProps } from '../Label';
+import ErrorBoundary from '../ErrorBoundary';
+import { DateLabel, HoverInfoLabel, StatusLabel, StatusLabelProps, ValueLabel } from '../Label';
 import Link, { LinkProps } from '../Link';
 import { useMetadataDisplayStyles } from '.';
 import DeleteButton from './DeleteButton';
 import EditButton from './EditButton';
 import { MetadataDictGrid, MetadataDisplay } from './MetadataDisplay';
+import ScaleButton from './ScaleButton';
 
-interface ResourceLinkProps extends Omit<LinkProps, 'routeName' | 'params'> {
+export interface ResourceLinkProps extends Omit<LinkProps, 'routeName' | 'params'> {
   name?: string;
   routeName?: string;
   routeParams?: RouteURLProps;
@@ -64,7 +66,7 @@ export function ResourceLink(props: ResourceLinkProps) {
   );
 }
 
-interface MainInfoSectionProps {
+export interface MainInfoSectionProps {
   resource: KubeObject | null;
   headerSection?: ((resource: KubeObject | null) => React.ReactNode) | React.ReactNode;
   title?: string;
@@ -94,26 +96,43 @@ export function MainInfoSection(props: MainInfoSectionProps) {
   const headerActions = useTypedSelector(state => state.ui.views.details.headerActions);
   const { t } = useTranslation('frequent');
 
-  function getHeaderActions() {
+  const header = typeof headerSection === 'function' ? headerSection(resource) : headerSection;
+
+  const allActions = (function stateActions() {
     return React.Children.toArray(
-      Object.values(headerActions).map(action => action({ item: resource }))
+      headerActions.map(Action => {
+        if (isValidElement(Action)) {
+          return <ErrorBoundary>{Action}</ErrorBoundary>;
+        } else if (Action === null) {
+          return null;
+        } else {
+          return (
+            <ErrorBoundary>
+              <Action item={resource} />
+            </ErrorBoundary>
+          );
+        }
+      })
     );
-  }
-
-  let defaultActions: React.ReactNode[] | null = [];
-
-  if (!noDefaultActions && resource) {
-    defaultActions = [<EditButton item={resource} />, <DeleteButton item={resource} />];
-  }
-
-  const propsHeaderActions = typeof actions === 'function' ? actions(resource) || [] : actions;
-
-  let header: React.ReactNode = [];
-  if (typeof headerSection === 'function') {
-    header = headerSection(resource);
-  } else {
-    header = headerSection;
-  }
+  })()
+    .concat(
+      (function propsActions() {
+        return React.Children.toArray(
+          typeof actions === 'function' ? actions(resource) || [] : actions
+        );
+      })()
+    )
+    .concat(
+      (function defaultActions() {
+        return !noDefaultActions && resource
+          ? [
+              <ScaleButton item={resource} />,
+              <EditButton item={resource} />,
+              <DeleteButton item={resource} />,
+            ]
+          : [];
+      })()
+    );
 
   return (
     <>
@@ -134,9 +153,7 @@ export function MainInfoSection(props: MainInfoSectionProps) {
           <SectionHeader
             title={title || (resource ? resource.kind : '')}
             headerStyle={headerStyle}
-            actions={getHeaderActions()
-              .concat(React.Children.toArray(propsHeaderActions))
-              .concat(defaultActions)}
+            actions={allActions}
           />
         }
       >
@@ -157,7 +174,8 @@ export function MainInfoSection(props: MainInfoSectionProps) {
   );
 }
 
-interface DetailsGridProps extends PropsWithChildren<Omit<MainInfoSectionProps, 'resource'>> {
+export interface DetailsGridProps
+  extends PropsWithChildren<Omit<MainInfoSectionProps, 'resource'>> {
   resourceType: KubeObject;
   name: string;
   namespace?: string;
@@ -206,18 +224,19 @@ export function DetailsGrid(props: DetailsGridProps) {
       />
       <>{!!sectionsFunc && sectionsFunc(item)}</>
       {children}
-      <DetailsViewPluginRenderer resource={item} />
+      <DetailsViewSection resource={item} />
     </PageGrid>
   );
 }
 
-interface PageGridProps extends GridProps {
-  sections?: React.ReactNode[];
+export interface PageGridProps extends GridProps {
+  sections?: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 export function PageGrid(props: PageGridProps) {
   const { sections = [], children = [], ...other } = props;
-  const childrenArray = React.Children.toArray(children).concat(sections);
+  const childrenArray = React.Children.toArray(children).concat(React.Children.toArray(sections));
   return (
     <Grid container spacing={1} justifyContent="flex-start" alignItems="stretch" {...other}>
       {childrenArray.map((section, i) => (
@@ -229,7 +248,7 @@ export function PageGrid(props: PageGridProps) {
   );
 }
 
-interface SectionGridProps {
+export interface SectionGridProps {
   items: React.ReactNode[];
   useDivider?: boolean;
 }
@@ -332,7 +351,7 @@ export function SecretField(props: InputProps) {
   );
 }
 
-interface ConditionsTableProps {
+export interface ConditionsTableProps {
   resource: KubeObjectInterface | null;
   showLastUpdate?: boolean;
 }
@@ -391,13 +410,13 @@ export function ConditionsTable(props: ConditionsTableProps) {
 
   return (
     <SimpleTable
-      data={(resource && resource.status && resource.status.conditions) || {}}
+      data={(resource && resource.status && resource.status.conditions) || []}
       columns={getColumns()}
     />
   );
 }
 
-interface VolumeMountsProps {
+export interface VolumeMountsProps {
   mounts?:
     | {
         mountPath: string;
@@ -406,7 +425,7 @@ interface VolumeMountsProps {
       }[];
 }
 
-function VolumeMounts(props: VolumeMountsProps) {
+export function VolumeMounts(props: VolumeMountsProps) {
   const { mounts } = props;
   const { t } = useTranslation();
   if (!mounts) {
@@ -434,7 +453,7 @@ function VolumeMounts(props: VolumeMountsProps) {
   );
 }
 
-function LivenessProbes(props: { liveness: KubeContainer['livenessProbe'] }) {
+export function LivenessProbes(props: { liveness: KubeContainer['livenessProbe'] }) {
   const classes = useMetadataDisplayStyles({});
 
   const { liveness } = props;
@@ -569,11 +588,15 @@ export function ContainerInfo(props: ContainerInfoProps) {
         hide: !status,
       },
       {
+        name: t('Image Pull Policy'),
+        value: container.imagePullPolicy,
+      },
+      {
         name: t('Image'),
         value: (
           <>
             <Typography>{container.image}</Typography>
-            {status && (
+            {status?.imageID && (
               <Typography className={classes.imageID}>
                 <Typography component="span" style={{ fontWeight: 'bold' }}>
                   ID:
@@ -606,6 +629,20 @@ export function ContainerInfo(props: ContainerInfoProps) {
         value: <LivenessProbes liveness={container.livenessProbe} />,
         hide: _.isEmpty(container.livenessProbe),
       },
+      {
+        name: t('Ports'),
+        value: (
+          <Grid container>
+            {container.ports?.map(({ containerPort, protocol }, index) => (
+              <Grid item xs={12} key={`port_line_${index}`}>
+                <ValueLabel>{`${protocol}:`}</ValueLabel>
+                <ValueLabel>{containerPort}</ValueLabel>
+              </Grid>
+            ))}
+          </Grid>
+        ),
+        hide: _.isEmpty(container.ports),
+      },
     ];
   }
 
@@ -624,7 +661,7 @@ export function ContainerInfo(props: ContainerInfoProps) {
   );
 }
 
-interface OwnedPodsSectionProps {
+export interface OwnedPodsSectionProps {
   resource: KubeObjectInterface;
   hideColumns?: PodListProps['hideColumns'];
 }
@@ -652,13 +689,14 @@ export function OwnedPodsSection(props: OwnedPodsSectionProps) {
       return [];
     }
     return pods.filter(item =>
-      resourceTemplateLabel.every(elem => Object.values(item.metadata.labels).includes(elem))
+      resourceTemplateLabel.every(elem => Object.values(item.metadata.labels || {}).includes(elem))
     );
   }
 
   const filteredPods = getOwnedPods();
   return <PodListRenderer hideColumns={hideColumns} pods={filteredPods} error={error} />;
 }
+
 export function ContainersSection(props: { resource: KubeObjectInterface | null }) {
   const { resource } = props;
   const { t } = useTranslation('glossary');

@@ -41,4 +41,13 @@ spec:
           initialDelaySeconds: 30
           timeoutSeconds: 30
       nodeSelector:
-        'beta.kubernetes.io/os': linux
+        'kubernetes.io/os': linux
+---
+kind: Secret
+apiVersion: v1
+metadata:
+  name: headlamp-admin
+  namespace: kube-system
+  annotations:
+    kubernetes.io/service-account.name: "headlamp-admin"
+type: kubernetes.io/service-account-token

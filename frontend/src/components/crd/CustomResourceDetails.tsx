@@ -2,15 +2,16 @@ import { JSONPath } from 'jsonpath-plus';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
-import DetailsViewPluginRenderer from '../../helpers/renderHelpers';
 import { ResourceClasses } from '../../lib/k8s';
 import { ApiError } from '../../lib/k8s/apiProxy';
 import CustomResourceDefinition, { KubeCRD, makeCustomResourceClass } from '../../lib/k8s/crd';
+import { createRouteURL } from '../../lib/router';
 import { localeDate } from '../../lib/util';
 import { HoverInfoLabel, NameValueTableRow, SectionBox } from '../common';
 import Empty from '../common/EmptyContent';
 import Loader from '../common/Loader';
 import { ConditionsTable, MainInfoSection, PageGrid } from '../common/Resource';
+import DetailsViewSection from '../DetailsViewSection';
 
 export default function CustomResourceDetailsFromURL() {
   const params = useParams<CustomResourceDetailsProps>();
@@ -39,7 +40,10 @@ export function CustomResourceDetails(props: CustomResourceDetailsProps) {
   return !crd ? (
     !!error ? (
       <Empty color="error">
-        {t(`crd|Error getting custom resource definition ${crdName}: ${error.message}`)}
+        {t('crd|Error getting custom resource definition {{ crdName }}: {{ errorMessage }}', {
+          crdName,
+          errorMessage: error.message,
+        })}
       </Empty>
     ) : (
       <Loader title={t('crd|Loading custom resource details')} />
@@ -122,7 +126,10 @@ function CustomResourceDetailsRenderer(props: CustomResourceDetailsRendererProps
   return !item ? (
     !!error ? (
       <Empty color="error">
-        {t(`crd|Error getting custom resource ${crName}: ${error.message}`)}
+        {t('crd|Error getting custom resource {{ crName }}: {{ errorMessage }}', {
+          crName,
+          errorMessage: error.message,
+        })}
       </Empty>
     ) : (
       <Loader title={t('crd|Loading custom resource details')} />
@@ -131,7 +138,7 @@ function CustomResourceDetailsRenderer(props: CustomResourceDetailsRendererProps
     <PageGrid>
       <MainInfoSection
         resource={item}
-        backLink={crd.detailsRoute}
+        backLink={createRouteURL(crd.detailsRoute, { name: crd.metadata.name })}
         extraInfo={getExtraInfo(extraColumns, item!.jsonData)}
       />
       {item!.jsonData.status?.conditions && (
@@ -139,7 +146,7 @@ function CustomResourceDetailsRenderer(props: CustomResourceDetailsRendererProps
           <ConditionsTable resource={item.jsonData} showLastUpdate={false} />
         </SectionBox>
       )}
-      <DetailsViewPluginRenderer resource={item} />
+      <DetailsViewSection resource={item} />
     </PageGrid>
   );
 }

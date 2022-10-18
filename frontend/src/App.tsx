@@ -7,7 +7,7 @@ import i18n from './i18n/config';
 import { useElectronI18n } from './i18n/electronI18n';
 import ThemeProviderNexti18n from './i18n/ThemeProviderNexti18n';
 import themes, { getThemeName, usePrefersColorScheme } from './lib/themes';
-import { initializePlugins } from './plugin';
+import Plugins from './plugin/Plugins';
 import { useTypedSelector } from './redux/reducers/reducers';
 import store from './redux/stores/store';
 
@@ -20,10 +20,6 @@ function AppWithRedux(props: React.PropsWithChildren<{}>) {
     themeName = getThemeName();
   }
 
-  React.useEffect(() => {
-    initializePlugins();
-  }, []);
-
   return (
     <I18nextProvider i18n={i18n}>
       <ThemeProviderNexti18n theme={themes[themeName]}>{props.children}</ThemeProviderNexti18n>
@@ -34,6 +30,7 @@ function AppWithRedux(props: React.PropsWithChildren<{}>) {
 function App() {
   return (
     <Provider store={store}>
+      <Plugins />
       <AppWithRedux>
         <AppContainer />
       </AppWithRedux>

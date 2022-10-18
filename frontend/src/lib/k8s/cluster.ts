@@ -1,3 +1,4 @@
+import { OpPatch } from 'json-patch';
 import React from 'react';
 import { createRouteURL } from '../router';
 import { timeAgo, useErrorState } from '../util';
@@ -49,13 +50,18 @@ export interface KubeOwnerReference {
   uid: string;
 }
 
+export interface ApiListOptions {
+  namespace?: string | string[];
+}
+
 // We have to define a KubeObject implementation here because the KubeObject
 // class is defined within the function and therefore not inferable.
 export interface KubeObjectIface<T extends KubeObjectInterface | KubeEvent> {
   apiList: (onList: (arg: InstanceType<KubeObjectIface<T>>[]) => void) => any;
   useApiList: (
     onList: (arg: InstanceType<KubeObjectIface<T>>[]) => void,
-    onError?: (err: ApiError) => void
+    onError?: (err: ApiError) => void,
+    opts?: ApiListOptions
   ) => any;
   useApiGet: (
     onGet: (...args: any) => void,
@@ -64,7 +70,7 @@ export interface KubeObjectIface<T extends KubeObjectInterface | KubeEvent> {
     onError?: (err: ApiError) => void
   ) => void;
   useList: (
-    onList?: (...arg: any[]) => any
+    opts?: ApiListOptions
   ) => [any[], ApiError | null, (items: any[]) => void, (err: ApiError | null) => void];
   getErrorMessage: (err?: ApiError | null) => string | null;
   new (json: T): any;
@@ -89,6 +95,17 @@ export function makeKubeObject<T extends KubeObjectInterface | KubeEvent>(
 
     get detailsRoute(): string {
       return this._class().className;
+    }
+
+    static get pluralName(): string {
+      // This is a naive way to get the plural name of the object by default. It will
+      // work in most cases, but for exceptions (like Ingress), we must override this.
+      return this.className.toLowerCase() + 's';
+    }
+
+    get pluralName(): string {
+      // In case we need to override the plural name in instances.
+      return this._class().pluralName;
     }
 
     get listRoute(): string {
@@ -136,16 +153,27 @@ export function makeKubeObject<T extends KubeObjectInterface | KubeEvent>(
       return this.jsonData!.kind;
     }
 
+    get isNamespaced() {
+      return this._class().isNamespaced;
+    }
+
+    static get isNamespaced() {
+      return this.apiEndpoint.isNamespaced;
+    }
+
     static apiList<U extends KubeObject>(
       onList: (arg: U[]) => void,
-      onError?: (err: ApiError) => void
+      onError?: (err: ApiError) => void,
+      opts?: {
+        namespace?: string;
+      }
     ) {
       const createInstance = (item: T) => this.create(item) as U;
 
       const args: any[] = [(list: T[]) => onList(list.map((item: T) => createInstance(item) as U))];
 
       if (this.apiEndpoint.isNamespaced) {
-        args.unshift(null);
+        args.unshift(opts?.namespace || null);
       }
 
       if (onError) {
@@ -157,18 +185,58 @@ export function makeKubeObject<T extends KubeObjectInterface | KubeEvent>(
 
     static useApiList<U extends KubeObject>(
       onList: (...arg: any[]) => any,
-      onError?: (err: ApiError) => void
+      onError?: (err: ApiError) => void,
+      opts?: ApiListOptions
     ) {
+      const [objs, setObjs] = React.useState<{ [key: string]: U[] }>({});
       const listCallback = onList as (arg: U[]) => void;
-      useConnectApi(this.apiList(listCallback, onError));
+
+      function onObjs(namespace: string, objList: U[]) {
+        if (objList.length > 0) {
+          let newObjs: typeof objs = {};
+          // Set the objects so we have them for the next API response...
+          setObjs(previousObjs => {
+            newObjs = { ...previousObjs, [namespace || '']: objList };
+            return newObjs;
+          });
+
+          let allObjs: U[] = [];
+          Object.values(newObjs).map(currentObjs => {
+            allObjs = allObjs.concat(currentObjs);
+          });
+
+          listCallback(allObjs);
+        }
+      }
+
+      const listCalls = [];
+      if (!!opts?.namespace) {
+        let namespaces: string[] = [];
+        if (typeof opts.namespace === 'string') {
+          namespaces = [opts.namespace];
+        } else if (Array.isArray(opts.namespace)) {
+          namespaces = opts.namespace as string[];
+        } else {
+          throw Error('namespace should be a string or array of strings');
+        }
+
+        for (const namespace of namespaces) {
+          listCalls.push(
+            this.apiList(objList => onObjs(namespace, objList as U[]), onError, { namespace })
+          );
+        }
+      } else {
+        // If we don't have a namespace set, then we only have one API call
+        // response to set and we return it right away.
+        listCalls.push(this.apiList(listCallback, onError));
+      }
+
+      useConnectApi(...listCalls);
     }
 
-    static useList<U extends KubeObject>(): [
-      U[] | null,
-      ApiError | null,
-      (items: U[]) => void,
-      (err: ApiError | null) => void
-    ] {
+    static useList<U extends KubeObject>(
+      opts?: ApiListOptions
+    ): [U[] | null, ApiError | null, (items: U[]) => void, (err: ApiError | null) => void] {
       const [objList, setObjList] = React.useState<U[] | null>(null);
       const [error, setError] = useErrorState(setObjList);
 
@@ -179,7 +247,7 @@ export function makeKubeObject<T extends KubeObjectInterface | KubeEvent>(
         }
       }
 
-      this.useApiList(setList, setError);
+      this.useApiList(setList, setError, opts);
 
       // Return getters and then the setters as the getters are more likely to be used with
       // this function.
@@ -228,7 +296,7 @@ export function makeKubeObject<T extends KubeObjectInterface | KubeEvent>(
 
     delete() {
       const args: string[] = [this.getName()];
-      if (this._class().apiEndpoint.isNamespaced) {
+      if (this.isNamespaced) {
         args.unshift(this.getNamespace()!);
       }
 
@@ -241,6 +309,40 @@ export function makeKubeObject<T extends KubeObjectInterface | KubeEvent>(
 
     static put(data: KubeObjectInterface) {
       return this.apiEndpoint.put(data);
+    }
+
+    scale(numReplicas: number) {
+      const hasScaleApi = Object.keys(this._class().apiEndpoint).includes('scale');
+      if (!hasScaleApi) {
+        throw new Error(`This class has no scale API: ${this._class().className}`);
+      }
+
+      const spec = {
+        replicas: numReplicas,
+      };
+
+      type ApiEndpointWithScale = {
+        scale: {
+          put: (data: { metadata: KubeMetadata; spec: { replicas: number } }) => Promise<any>;
+        };
+      };
+
+      return (this._class().apiEndpoint as ApiEndpointWithScale).scale.put({
+        metadata: this.metadata,
+        spec,
+      });
+    }
+
+    patch(body: OpPatch[]) {
+      const patchMethod = this._class().apiEndpoint.patch;
+      const args: Parameters<typeof patchMethod> = [body];
+
+      if (this.isNamespaced) {
+        args.push(this.getNamespace());
+      }
+
+      args.push(this.getName());
+      return this._class().apiEndpoint.patch(...args);
     }
 
     async getAuthorization(verb: string) {
@@ -369,7 +471,7 @@ export interface KubeContainer {
   imagePullPolicy: string;
 }
 
-interface KubeContainerProbe {
+export interface KubeContainerProbe {
   httpGet?: {
     path?: string;
     port: number;

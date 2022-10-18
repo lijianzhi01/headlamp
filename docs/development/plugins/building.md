@@ -6,12 +6,6 @@ linktitle: Building & Shipping
 This section explains how to start developing a Headlamp plugin, and how
 to ship it once finished.
 
-Before you dive into the following sections on how to develop plugins for
-Headlamp, you can watch this quick [video](https://www.youtube.com/watch?v=vyki8c6AkeE)
-to see how simple it is to get started.
-
-{{< youtube "vyki8c6AkeE" >}}
-
 ## Creating a new plugin
 
 This is how to start a new plugin:
@@ -122,7 +116,7 @@ For in-cluster Headlamp deployments, when running Headlamp's server,
 the `-plugin-dir` option should point to the directory:
 
 ```bash
-./server -plugins-dir=.plugins
+./headlamp-server -plugins-dir=.plugins
 ```
 
 ### Using plugins on the desktop version
@@ -130,3 +124,22 @@ the `-plugin-dir` option should point to the directory:
 The Headlamp desktop app will look for the plugins directory (in the format
 mentioned above) either under the user's Headlamp configuration folder,
 or within the current folder as `.plugins` if the former doesn't exist.
+
+### Bundling plugins with desktop version
+
+To build a Headlamp app with a set of plugins, first extract some plugins 
+into the .plugins folder in the root of the "headlamp" repo.
+
+```bash
+cd plugins/examples/pod-counter
+npm install
+npm run build
+cd ../..
+
+mkdir .plugins
+npx @kinvolk/headlamp-plugin extract ./plugins/examples/ ./.plugins
+ls -la .plugins
+make app-linux
+```
+
+For more on how to extract files into there see "Shipping and Deploying Plugins" above.

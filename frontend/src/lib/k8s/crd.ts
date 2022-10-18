@@ -1,4 +1,3 @@
-import { createRouteURL } from '../router';
 import { ResourceClasses } from '.';
 import { apiFactory, apiFactoryWithNamespace } from './apiProxy';
 import { KubeObjectInterface, makeKubeObject } from './cluster';
@@ -41,16 +40,16 @@ class CustomResourceDefinition extends makeKubeObject<KubeCRD>('crd') {
     return 'CustomResourceDefinition';
   }
 
-  get listRoute(): string {
-    return 'crds';
-  }
-
   get detailsRoute(): string {
-    return createRouteURL('crd', { name: this.jsonData!.metadata.name });
+    return 'crd';
   }
 
   get spec() {
     return this.jsonData!.spec;
+  }
+
+  get plural(): string {
+    return this.spec().names.plural;
   }
 }
 

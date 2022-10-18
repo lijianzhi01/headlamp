@@ -1,6 +1,12 @@
 import { OptionsObject as SnackbarProps } from 'notistack';
-import { sectionFunc } from '../../plugin/registry';
-import { SidebarEntry, UIState } from '../reducers/ui';
+import { ReactElement } from 'react';
+import { ClusterChooserType } from '../../components/cluster/ClusterChooser';
+import { DetailsViewSectionType } from '../../components/DetailsViewSection';
+import { SidebarEntryProps } from '../../components/Sidebar';
+import { AppLogoType } from '../../components/Sidebar/AppLogo';
+import { Notification } from '../../lib/notification';
+import { Route } from '../../lib/router';
+import { UIState } from '../reducers/ui';
 
 export const FILTER_RESET = 'FILTER_RESET';
 export const FILTER_SET_NAMESPACE = 'FILTER_SET_NAMESPACE';
@@ -12,13 +18,26 @@ export const CONFIG_NEW = 'CONFIG_NEW';
 export const UI_SIDEBAR_SET_SELECTED = 'UI_SIDEBAR_SET_SELECTED';
 export const UI_SIDEBAR_SET_VISIBLE = 'UI_SIDEBAR_SET_VISIBLE';
 export const UI_SIDEBAR_SET_ITEM = 'UI_SIDEBAR_SET_ITEM';
+export const UI_SIDEBAR_SET_ITEM_FILTER = 'UI_SIDEBAR_SET_ITEM_FILTER';
 export const UI_SIDEBAR_SET_EXPANDED = 'UI_SIDEBAR_SET_EXPANDED';
 export const UI_ROUTER_SET_ROUTE = 'UI_ROUTER_SET_ROUTE';
+export const UI_ROUTER_SET_ROUTE_FILTER = 'UI_ROUTER_SET_ROUTE_FILTER';
 export const UI_DETAILS_VIEW_SET_HEADER_ACTION = 'UI_DETAILS_VIEW_SET_HEADER_ACTION';
 export const UI_SET_DETAILS_VIEW = 'UI_SET_DETAILS_VIEW';
 export const UI_APP_BAR_SET_ACTION = 'UI_APP_BAR_SET_ACTION';
 export const UI_THEME_SET = 'UI_THEME_SET';
-export const UI_RESET_PLUGIN_VIEWS = 'UI_RESET_PLUGIN_VIEWS';
+export const UI_INITIALIZE_PLUGIN_VIEWS = 'UI_INITIALIZE_PLUGIN_VIEWS';
+export const UI_PLUGINS_LOADED = 'UI_PLUGINS_LOADED';
+export const UI_VERSION_DIALOG_OPEN = 'UI_VERSION_DIALOG_OPEN';
+export const UI_BRANDING_SET_APP_LOGO = 'UI_BRANDING_SET_APP_LOGO';
+export const UI_SET_CLUSTER_CHOOSER_BUTTON = 'UI_SET_CLUSTER_CHOOSER_BUTTON';
+export const UI_HIDE_APP_BAR = 'UI_HIDE_APP_BAR';
+
+export interface BrandingProps {
+  logo: AppLogoType;
+}
+export const UI_SET_NOTIFICATIONS = 'UI_SET_NOTIFICATIONS';
+export const UI_UPDATE_NOTIFICATION = 'UI_UPDATE_NOTIFICATION';
 
 export interface ClusterActionButton {
   label: string;
@@ -61,8 +80,8 @@ export interface Action {
 
 type SidebarType = UIState['sidebar'];
 
-export type HeaderActionFunc = (...args: any[]) => JSX.Element | null;
-export type DetailsViewFunc = HeaderActionFunc;
+export type HeaderActionType = ((...args: any[]) => JSX.Element | null) | null | ReactElement;
+export type DetailsViewFunc = HeaderActionType;
 
 export function setNamespaceFilter(namespaces: string[]) {
   return { type: FILTER_SET_NAMESPACE, namespaces: namespaces };
@@ -96,11 +115,15 @@ export function setWhetherSidebarOpen(isSidebarOpen: boolean) {
   return { type: UI_SIDEBAR_SET_EXPANDED, isSidebarOpen, isSidebarOpenUserSelected: isSidebarOpen };
 }
 
+export function setHideAppBar(hideAppBar: boolean | undefined) {
+  return { type: UI_HIDE_APP_BAR, hideAppBar };
+}
+
 export function setSidebarVisible(isVisible: SidebarType['isVisible']) {
   return { type: UI_SIDEBAR_SET_VISIBLE, isVisible };
 }
 
-export function setSidebarItem(item: SidebarEntry) {
+export function setSidebarItem(item: SidebarEntryProps) {
   // @todo: Clarify the spec when we port this to Ts.
   if (item.parent === undefined) {
     item['parent'] = null;
@@ -108,25 +131,33 @@ export function setSidebarItem(item: SidebarEntry) {
   return { type: UI_SIDEBAR_SET_ITEM, item };
 }
 
-export function setRoute(routeSpec: any) {
-  // @todo: Define routeSpec later.
+export function setSidebarItemFilter(
+  filterFunc: (entry: SidebarEntryProps) => SidebarEntryProps | null
+) {
+  return { type: UI_SIDEBAR_SET_ITEM_FILTER, filterFunc };
+}
+
+export function setRoute(routeSpec: Route) {
   return { type: UI_ROUTER_SET_ROUTE, route: routeSpec };
 }
 
-export function setDetailsViewHeaderAction(actionName: string, actionFunc: HeaderActionFunc) {
-  return { type: UI_DETAILS_VIEW_SET_HEADER_ACTION, name: actionName, action: actionFunc };
+export function setRouteFilter(filterFunc: (entry: Route) => Route | null) {
+  return { type: UI_ROUTER_SET_ROUTE_FILTER, filterFunc };
 }
 
-export function setDetailsView(sectionName: string, sectionFunc: sectionFunc) {
+export function setDetailsViewHeaderAction(actionFunc: HeaderActionType) {
+  return { type: UI_DETAILS_VIEW_SET_HEADER_ACTION, action: actionFunc };
+}
+
+export function setDetailsView(viewSection: DetailsViewSectionType) {
   return {
     type: UI_SET_DETAILS_VIEW,
-    sectionName,
-    action: sectionFunc,
+    action: viewSection,
   };
 }
 
-export function setAppBarAction(actionName: string, actionFunc: HeaderActionFunc) {
-  return { type: UI_APP_BAR_SET_ACTION, name: actionName, action: actionFunc };
+export function setAppBarAction(actionFunc: HeaderActionType) {
+  return { type: UI_APP_BAR_SET_ACTION, action: actionFunc };
 }
 
 export function setConfig(config: object) {
@@ -135,4 +166,27 @@ export function setConfig(config: object) {
 
 export function setTheme(name?: string) {
   return { type: UI_THEME_SET, theme: { name } };
+}
+
+export function setPluginsLoadState(pluginsLoadedState: boolean) {
+  return { type: UI_PLUGINS_LOADED, pluginsLoadedState };
+}
+
+export function setBrandingAppLogoComponent(component: AppLogoType) {
+  return { type: UI_BRANDING_SET_APP_LOGO, component };
+}
+
+export function setUINotifications(notifications: Notification[] | Notification) {
+  return { type: UI_SET_NOTIFICATIONS, notifications };
+}
+
+export function updateUINotification(dispatchedNotification: Notification[] | Notification) {
+  return { type: UI_UPDATE_NOTIFICATION, dispatchedNotification };
+}
+export function setClusterChooserButtonComponent(component: ClusterChooserType) {
+  return { type: UI_SET_CLUSTER_CHOOSER_BUTTON, component };
+}
+
+export function setVersionDialogOpen(isVersionDialogOpen: boolean) {
+  return { type: UI_VERSION_DIALOG_OPEN, isVersionDialogOpen };
 }

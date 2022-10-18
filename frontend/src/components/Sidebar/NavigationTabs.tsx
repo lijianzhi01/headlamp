@@ -1,14 +1,14 @@
 import { Divider } from '@material-ui/core';
 import Box from '@material-ui/core/Box';
-import { makeStyles } from '@material-ui/core/styles';
+import { makeStyles, useTheme } from '@material-ui/core/styles';
 import useMediaQuery from '@material-ui/core/useMediaQuery';
 import { useTranslation } from 'react-i18next';
 import { generatePath, useHistory } from 'react-router';
 import { createRouteURL } from '../../lib/router';
 import { getCluster, getClusterPrefixedPath } from '../../lib/util';
 import { useTypedSelector } from '../../redux/reducers/reducers';
-import { SidebarEntry } from '../../redux/reducers/ui';
 import Tabs from '../common/Tabs';
+import { SidebarItemProps } from '../Sidebar';
 import prepareRoutes from './prepareRoutes';
 
 const useStyle = makeStyles(() => ({
@@ -17,7 +17,7 @@ const useStyle = makeStyles(() => ({
   },
 }));
 
-function searchNameInSubList(sublist: SidebarEntry['subList'], name: string): boolean {
+function searchNameInSubList(sublist: SidebarItemProps['subList'], name: string): boolean {
   if (!sublist) {
     return false;
   }
@@ -29,7 +29,10 @@ function searchNameInSubList(sublist: SidebarEntry['subList'], name: string): bo
   return false;
 }
 
-function findParentOfSubList(list: SidebarEntry[], name: string | null): SidebarEntry | null {
+function findParentOfSubList(
+  list: SidebarItemProps[],
+  name: string | null
+): SidebarItemProps | null {
   if (!name) {
     return null;
   }
@@ -47,10 +50,13 @@ export default function NavigationTabs() {
   const history = useHistory();
   const classes = useStyle();
   const sidebar = useTypedSelector(state => state.ui.sidebar);
-  const isMobile = useMediaQuery('(max-width:600px)');
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('xs'));
+  const isSmallSideBar = useMediaQuery(theme.breakpoints.only('sm'));
   const { t } = useTranslation();
 
-  if (sidebar.isSidebarOpen || isMobile) {
+  // Always show the navigation tabs when the sidebar is the small version
+  if (!isSmallSideBar && (sidebar.isSidebarOpen || isMobile)) {
     return null;
   }
 

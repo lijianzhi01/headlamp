@@ -8,20 +8,119 @@
  */
 
 import { OpPatch } from 'json-patch';
+import _ from 'lodash';
+import { decodeToken } from 'react-jwt';
 import helpers from '../../helpers';
-import { getToken, logout } from '../auth';
+import store from '../../redux/stores/store';
+import { getToken, logout, setToken } from '../auth';
 import { getCluster } from '../util';
-import { KubeMetrics, KubeObjectInterface } from './cluster';
+import { ResourceClasses } from '.';
+import { KubeMetadata, KubeMetrics, KubeObjectInterface } from './cluster';
+import { KubeToken } from './token';
 
 const BASE_HTTP_URL = helpers.getAppUrl();
 const BASE_WS_URL = BASE_HTTP_URL.replace('http', 'ws');
 const CLUSTERS_PREFIX = 'clusters';
 const JSON_HEADERS = { Accept: 'application/json', 'Content-Type': 'application/json' };
 const DEFAULT_TIMEOUT = 2 * 60 * 1000; // ms
+const MIN_LIFESPAN_FOR_TOKEN_REFRESH = 10; // sec
 
-interface RequestParams {
+let isTokenRefreshInProgress = false;
+
+export interface RequestParams {
   timeout?: number; // ms
   [prop: string]: any;
+}
+
+export interface ClusterRequest {
+  /** The name of the cluster (has to be unique, or it will override an existing cluster) */
+  name: string;
+  /** The cluster URL */
+  server: string;
+  /** Whether the server's certificate should not be checked for validity */
+  insecureTLSVerify?: boolean;
+  /** The certificate authority data */
+  certificateAuthorityData?: string;
+}
+
+//refreshToken checks if the token is about to expire and refreshes it if so.
+async function refreshToken(token: string | null) {
+  if (!token || isTokenRefreshInProgress) {
+    return;
+  }
+  // decode token
+  const decodedToken: any = decodeToken(token);
+
+  // return if the token doesn't have an expiry time
+  if (!decodedToken.exp) {
+    return;
+  }
+  // convert expiry seconds to date object
+  const expiry = decodedToken.exp;
+  const now = new Date().valueOf();
+  const expDate = new Date(0);
+  expDate.setUTCSeconds(expiry);
+
+  // calculate time to expiry in seconds
+  const diff = (expDate.valueOf() - now) / 1000;
+  // If the token is not about to expire return
+  // comparing the time to expiry with the minimum lifespan for a token both in seconds
+  if (diff > MIN_LIFESPAN_FOR_TOKEN_REFRESH) {
+    return;
+  }
+  const namespace =
+    (decodedToken && decodedToken['kubernetes.io'] && decodedToken['kubernetes.io']['namespace']) ||
+    '';
+  const serviceAccountName =
+    (decodedToken &&
+      decodedToken['kubernetes.io'] &&
+      decodedToken['kubernetes.io']['serviceaccount'] &&
+      decodedToken['kubernetes.io']['serviceaccount']['name']) ||
+    {};
+  const cluster = getCluster();
+  if (!cluster || namespace === '' || serviceAccountName === '') {
+    return;
+  }
+
+  console.debug('Refreshing token');
+  isTokenRefreshInProgress = true;
+
+  let tokenUrl = combinePath(BASE_HTTP_URL, `/${CLUSTERS_PREFIX}/${cluster}`);
+  tokenUrl = combinePath(
+    tokenUrl,
+    `api/v1/namespaces/${namespace}/serviceaccounts/${serviceAccountName}/token`
+  );
+  const tokenData = {
+    kind: 'TokenRequest',
+    apiVersion: 'authentication.k8s.io/v1',
+    metadata: { creationTimestamp: null },
+    spec: { expirationSeconds: 86400 },
+  };
+
+  try {
+    const response = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, ...JSON_HEADERS },
+      body: JSON.stringify(tokenData),
+    });
+
+    if (response.status === 201) {
+      const token: KubeToken = await response.json();
+      setToken(cluster, token.status.token);
+    }
+
+    isTokenRefreshInProgress = false;
+  } catch (err) {
+    console.error('Error refreshing token', err);
+    isTokenRefreshInProgress = false;
+  }
+}
+
+// getClusterAuthType returns the auth type of the cluster.
+function getClusterAuthType(cluster: string): string {
+  const state = store.getState();
+  const authType: string = state.config?.clusters?.[cluster]?.['auth_type'] || '';
+  return authType;
 }
 
 export async function request(
@@ -44,6 +143,12 @@ export async function request(
   let fullPath = path;
   if (useCluster && cluster) {
     const token = getToken(cluster);
+
+    // Refresh service account token only if the cluster auth type is not OIDC
+    if (getClusterAuthType(cluster) !== 'oidc') {
+      await refreshToken(token);
+    }
+
     if (!!token) {
       opts.headers.Authorization = `Bearer ${token}`;
     }
@@ -261,6 +366,7 @@ function simpleApiFactoryWithNamespace(
 ) {
   const apiRoot = getApiRoot(group, version);
   const results: {
+    scale?: ReturnType<typeof apiScaleFactory>;
     [other: string]: any;
   } = {
     list: (namespace: string, cb: StreamResultsCb, errCb: StreamErrCb) =>
@@ -315,9 +421,11 @@ function resourceDefToApiFactory(resourceDef: KubeObjectInterface): ApiFactoryRe
     throw new Error(`apiVersion has no version string: ${resourceDef.apiVersion}`);
   }
 
-  // This may not be a great way to get the resource plural, but allows us to
-  // skip checking the CRDs for it.
-  const resourcePlural = resourceDef.kind.toLowerCase() + 's';
+  // Try to use a known resource class to get the plural from, otherwise fall back to
+  // generating a plural from the kind (which is very naive).
+  const knownResource = ResourceClasses[resourceDef.kind];
+  const resourcePlural = knownResource?.pluralName || resourceDef.kind.toLowerCase() + 's';
+
   return factoryFunc(apiGroup, apiVersion, resourcePlural);
 }
 
@@ -328,7 +436,7 @@ function getApiRoot(group: string, version: string) {
 function apiScaleFactory(apiRoot: string, resource: string) {
   return {
     get: (namespace: string, name: string) => request(url(namespace, name)),
-    put: (body: KubeObjectInterface) =>
+    put: (body: { metadata: KubeMetadata; spec: { replicas: number } }) =>
       put(url(body.metadata.namespace as string, body.metadata.name), body),
   };
 
@@ -361,7 +469,7 @@ export function patch(url: string, json: any, autoLogoutOnAuthError = true, requ
 
 export function put(
   url: string,
-  json: KubeObjectInterface,
+  json: Partial<KubeObjectInterface>,
   autoLogoutOnAuthError = true,
   requestOptions = {}
 ) {
@@ -502,17 +610,20 @@ export async function streamResults(url: string, cb: StreamResultsCb, errCb: Str
   }
 }
 
-interface StreamArgs {
+export interface StreamArgs {
   isJson?: boolean;
   additionalProtocols?: string[];
   connectCb?: () => void;
   reconnectOnFailure?: boolean;
+  failCb?: () => void;
 }
 
 export function stream(url: string, cb: StreamResultsCb, args: StreamArgs) {
   let connection: ReturnType<typeof connectStream>;
   let isCancelled = false;
-  const { isJson = false, additionalProtocols, connectCb, reconnectOnFailure = true } = args;
+  const { failCb } = args;
+  // We only set reconnectOnFailure as true by default if the failCb has not been provided.
+  const { isJson = false, additionalProtocols, connectCb, reconnectOnFailure = !!failCb } = args;
 
   connect();
 
@@ -532,12 +643,22 @@ export function stream(url: string, cb: StreamResultsCb, args: StreamArgs) {
     connection = connectStream(url, cb, onFail, isJson, additionalProtocols);
   }
 
-  function onFail() {
+  function retryOnFail() {
     if (isCancelled) return;
 
     if (reconnectOnFailure) {
       console.log('Reconnecting in 3 seconds', { url });
       setTimeout(connect, 3000);
+    }
+  }
+
+  function onFail() {
+    if (!!failCb) {
+      failCb();
+    }
+
+    if (reconnectOnFailure) {
+      retryOnFail();
     }
   }
 }
@@ -623,17 +744,30 @@ function combinePath(base: string, path: string) {
 }
 
 export async function apply(body: KubeObjectInterface): Promise<JSON> {
-  const apiEndpoint = resourceDefToApiFactory(body);
+  let bodyToApply = body;
+  // Check if the default namespace is needed. And we need to do this before
+  // getting the apiEndpoint because it will affect the endpoint itself.
+  const { namespace } = body.metadata;
+  if (!namespace) {
+    const knownResource = ResourceClasses[body.kind];
+    if (knownResource?.isNamespaced) {
+      // Clone the param to avoid modifying the original object.
+      bodyToApply = _.cloneDeep(body);
+      bodyToApply.metadata.namespace = 'default';
+    }
+  }
+
+  const apiEndpoint = resourceDefToApiFactory(bodyToApply);
 
   try {
-    return await apiEndpoint.post(body);
+    return await apiEndpoint.post(bodyToApply);
   } catch (err) {
     // Check to see if failed because the record already exists.
     // If the failure isn't a 409 (i.e. Confilct), just rethrow.
     if ((err as ApiError).status !== 409) throw err;
 
     // We had a conflict. Try a PUT
-    return apiEndpoint.put(body);
+    return apiEndpoint.put(bodyToApply);
   }
 }
 
@@ -675,4 +809,13 @@ export async function testAuth() {
   return post('/apis/authorization.k8s.io/v1/selfsubjectrulesreviews', { spec }, false, {
     timeout: 5 * 1000,
   });
+}
+
+export async function setCluster(clusterReq: ClusterRequest) {
+  return request(
+    '/cluster',
+    { method: 'POST', body: JSON.stringify(clusterReq), headers: JSON_HEADERS },
+    false,
+    false
+  );
 }

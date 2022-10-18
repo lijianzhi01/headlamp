@@ -10,6 +10,7 @@ import TablePagination from '@material-ui/core/TablePagination';
 import TableRow from '@material-ui/core/TableRow';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import helpers from '../../helpers';
 import Empty from './EmptyContent';
 import { ValueLabel } from './Label';
 import Loader from './Loader';
@@ -63,10 +64,12 @@ interface SimpleTableGetterColumn extends SimpleTableColumn {
 
 export interface SimpleTableProps {
   columns: (SimpleTableGetterColumn | SimpleTableDatumColumn)[];
-  data: {
-    [dataProp: string]: any;
-    [dataProp: number]: any;
-  } | null;
+  data:
+    | {
+        [dataProp: string]: any;
+        [dataProp: number]: any;
+      }[]
+    | null;
   filterFunction?: (...args: any[]) => boolean;
   rowsPerPage?: number[];
   emptyMessage?: string;
@@ -114,8 +117,10 @@ export default function SimpleTable(props: SimpleTableProps) {
   const [page, setPage] = React.useState(0);
   const [currentData, setCurrentData] = React.useState(data);
   const [displayData, setDisplayData] = React.useState(data);
-  const rowsPerPageOptions = props.rowsPerPage || [5, 10, 50];
-  const [rowsPerPage, setRowsPerPage] = React.useState(rowsPerPageOptions[0]);
+  const rowsPerPageOptions = props.rowsPerPage || [15, 25, 50];
+  const [rowsPerPage, setRowsPerPage] = React.useState(
+    helpers.getTablesRowsPerPage(rowsPerPageOptions[0])
+  );
   const classes = useTableStyle();
   const [isIncreasingOrder, setIsIncreasingOrder] = React.useState(
     !defaultSortingColumn || defaultSortingColumn > 0
@@ -133,7 +138,9 @@ export default function SimpleTable(props: SimpleTableProps) {
   function handleChangeRowsPerPage(
     event: React.ChangeEvent<HTMLTextAreaElement> | React.ChangeEvent<HTMLInputElement>
   ) {
-    setRowsPerPage(+event.target.value);
+    const numRows = +event.target.value;
+    helpers.setTablesRowsPerPage(numRows);
+    setRowsPerPage(numRows);
     setPage(0);
   }
 
@@ -294,17 +301,20 @@ export default function SimpleTable(props: SimpleTableProps) {
           {filteredData.length > 0 ? (
             getPagedRows().map((row: any, i: number) => (
               <TableRow key={i}>
-                {columns.map((col, i) => (
-                  <TableCell key={`cell_${i}`}>
-                    {i === 0 && row.color && (
-                      <React.Fragment>
-                        <InlineIcon icon="mdi:square" color={row.color} height="15" width="15" />
-                        &nbsp;
-                      </React.Fragment>
-                    )}
-                    {'datum' in col ? row[col.datum] : col.getter(row)}
-                  </TableCell>
-                ))}
+                {columns.map((col, i) => {
+                  const { cellProps = {} } = col;
+                  return (
+                    <TableCell key={`cell_${i}`} {...cellProps}>
+                      {i === 0 && row.color && (
+                        <React.Fragment>
+                          <InlineIcon icon="mdi:square" color={row.color} height="15" width="15" />
+                          &nbsp;
+                        </React.Fragment>
+                      )}
+                      {'datum' in col ? row[col.datum] : col.getter(row)}
+                    </TableCell>
+                  );
+                })}
               </TableRow>
             ))
           ) : (
@@ -342,6 +352,7 @@ const useStyles = makeStyles(theme => ({
     width: '100%',
     verticalAlign: 'top',
     fontSize: '1rem',
+    overflowWrap: 'anywhere',
   },
   metadataNameCell: {
     fontSize: '1rem',
@@ -365,9 +376,13 @@ const useStyles = makeStyles(theme => ({
 }));
 
 export interface NameValueTableRow {
+  /** The name (key) for this row */
   name: string | JSX.Element;
+  /** The value for this row */
   value?: string | JSX.Element | JSX.Element[];
-  hide?: boolean;
+  /** Whether this row should be hidden (can be a boolean or a function that will take the
+   * @param value and return a boolean) */
+  hide?: boolean | ((value: NameValueTableRow['value']) => boolean);
 }
 
 interface NameValueTableProps {
@@ -404,11 +419,23 @@ export function NameValueTable(props: NameValueTableProps) {
     <Table className={classes.table}>
       <TableBody>
         {rows.map(({ name, value, hide = false }, i) => {
-          if (hide) return null;
+          let shouldHide = false;
+          if (typeof hide === 'function') {
+            shouldHide = hide(value);
+          } else {
+            shouldHide = hide;
+          }
+
+          if (shouldHide) {
+            return null;
+          }
+
           return (
             <TableRow key={i}>
-              <TableCell className={classes.metadataNameCell}>{name}</TableCell>
-              <TableCell scope="row" className={classes.metadataCell}>
+              <TableCell component="th" scope="row" className={classes.metadataNameCell}>
+                {name}
+              </TableCell>
+              <TableCell className={classes.metadataCell}>
                 <Value value={value} />
               </TableCell>
             </TableRow>

@@ -22,6 +22,18 @@ type Cluster struct {
 	AuthType string `json:"auth_type"`
 }
 
+type ClusterReq struct {
+	Name   string `json:"name"`
+	Server string `json:"server"`
+	// InsecureSkipTLSVerify skips the validity check for the server's certificate.
+	// This will make your HTTPS connections insecure.
+	// +optional
+	InsecureSkipTLSVerify bool `json:"insecure-skip-tls-verify,omitempty"`
+	// CertificateAuthorityData contains PEM-encoded certificate authority certificates. Overrides CertificateAuthority
+	// +optional
+	CertificateAuthorityData []byte `json:"certificate-authority-data,omitempty"`
+}
+
 func GetClusterOidcConfig(clusterName string) (*OidcConfig, error) {
 	if oidcConfig, ok := oidcConfigCache[clusterName]; ok {
 		return oidcConfig, nil
@@ -70,8 +82,9 @@ func (c *Cluster) getName() *string {
 
 // pathRelativeToBase returns either an absolute path, or a relative path prefixed with base.
 // Examples:
-//   pathRelativeToBase("/etc", "passwd") -> "/etc/passwd"
-//   pathRelativeToBase("/etc", "/etc/passwd") -> "/etc/passwd"
+//
+//	pathRelativeToBase("/etc", "passwd") -> "/etc/passwd"
+//	pathRelativeToBase("/etc", "/etc/passwd") -> "/etc/passwd"
 func pathRelativeToBase(base string, dest string) string {
 	if filepath.IsAbs(dest) {
 		return dest
@@ -80,7 +93,7 @@ func pathRelativeToBase(base string, dest string) string {
 	return path.Join(base, dest)
 }
 
-func (c *Cluster) getCAData() []byte {
+func (c *Cluster) getCAData() ([]byte, error) {
 	if c.config.CertificateAuthority != "" {
 		// paths inside the config are relative to the config.
 		configDir := filepath.Dir(c.config.LocationOfOrigin)
@@ -88,17 +101,19 @@ func (c *Cluster) getCAData() []byte {
 
 		pemBytes, err := ioutil.ReadFile(caPath)
 		if err == nil {
-			return pemBytes
+			return pemBytes, nil
 		}
 
-		log.Fatal("Failed to add certificate:", err)
+		log.Println("Failed to add certificate:", err)
+
+		return nil, fmt.Errorf("failed to add certificate for cluster %q: %w", c.Name, err)
 	}
 
 	if caData := c.config.CertificateAuthorityData; len(caData) > 0 {
-		return caData
+		return caData, nil
 	}
 
-	return nil
+	return nil, fmt.Errorf("no certificate authority data found for cluster %s", c.Name)
 }
 
 func (c *Cluster) shouldVerifyTLS() bool {

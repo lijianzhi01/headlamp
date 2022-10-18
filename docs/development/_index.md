@@ -66,14 +66,30 @@ make app-linux
 ```
 
 ```bash
-make app-windows
-```
-
-```bash
 make app-mac
 ```
 
-See the generated app files in app/dist/
+```bash
+make app-win
+```
+
+For Windows, by default it will produce an installer using [NSIS (Nullsoft Scriptable Install System)](https://sourceforge.net/projects/nsis/).
+
+If you prefer an `.msi` installer, then be sure to install the [WiX Toolset](https://wixtoolset.org/) and have its `light.exe` and `candle.exe` in the Windows path.
+E.g. if you are using WiX Toolset version 3.11, this can be done by running the following command,
+before the one above:
+
+```bash
+set PATH=%PATH%;C:\Program Files (x86)\WiX Toolset v3.11\bin
+```
+
+Then run the following command to generate the `.msi` installer:
+
+```bash
+make app-win-msi
+```
+
+See the generated app files in app/dist/ .
 
 
 ## Build a container image
@@ -95,7 +111,7 @@ folders - you may need to add other folders if your config refers
 to more folders.
 
 ```bash
-docker run --network="host" -p 127.0.0.1:4466:4466/tcp --mount type=bind,source="/home/rene/.minikube",target=$HOME/.minikube --mount type=bind,source="$HOME/.kube",target=/root/.kube ghcr.io/kinvolk/headlamp:latest /headlamp/server -html-static-dir /headlamp/frontend -plugins-dir=/headlamp/plugins
+docker run --network="host" -p 127.0.0.1:4466:4466/tcp --mount type=bind,source="/home/rene/.minikube",target=$HOME/.minikube --mount type=bind,source="$HOME/.kube",target=/root/.kube ghcr.io/kinvolk/headlamp:latest /headlamp/headlamp-server -html-static-dir /headlamp/frontend -plugins-dir=/headlamp/plugins
 ```
 
 If you want to make a new container image called `kinvolk/headlamp:development`
@@ -106,7 +122,7 @@ $ DOCKER_IMAGE_VERSION=development make image
 ...
 Successfully tagged kinvolk/headlamp:development
 
-$ docker run --network="host" -p 127.0.0.1:4466:4466/tcp --mount type=bind,source="/home/rene/.minikube",target=$HOME/.minikube --mount type=bind,source="$HOME/.kube",target=/root/.kube kinvolk/headlamp:development /headlamp/server -html-static-dir /headlamp/frontend -plugins-dir=/headlamp/plugins
+$ docker run --network="host" -p 127.0.0.1:4466:4466/tcp --mount type=bind,source="/home/rene/.minikube",target=$HOME/.minikube --mount type=bind,source="$HOME/.kube",target=/root/.kube kinvolk/headlamp:development /headlamp/headlamp-server -html-static-dir /headlamp/frontend -plugins-dir=/headlamp/plugins
 ```
 
 Then go to https://localhost:4466 in your browser.
@@ -136,7 +152,7 @@ $ DOCKER_IMAGE_VERSION=development make image
 #### Create a deployment yaml.
 
 ```bash
-$ kubectl create deployment headlamp -n kube-system --image=kinvolk/headlamp:development -o yaml --dry-run -- /headlamp/server -html-static-dir /headlamp/frontend -in-cluster -plugins-dir=/headlamp/plugins > minikube-headlamp.yaml
+$ kubectl create deployment headlamp -n kube-system --image=kinvolk/headlamp:development -o yaml --dry-run -- /headlamp/headlamp-server -html-static-dir /headlamp/frontend -in-cluster -plugins-dir=/headlamp/plugins > minikube-headlamp.yaml
 ```
 
 To use the local container image we change the `imagePullPolicy` to Never.
@@ -166,7 +182,7 @@ spec:
     spec:
       containers:
       - command:
-        - /headlamp/server
+        - /headlamp/headlamp-server
         - -html-static-dir
         - /headlamp/frontend
         - -in-cluster
@@ -210,3 +226,18 @@ and point to it by using the mentioned option.
 An alternative is to build an image that ships some plugins in it. For that,
 just create a ".plugins" folder in the Headlamp project directory as the Dockerfile
 will include it and point to it by default.
+
+## Special Build Options
+
+Here are some options that can be used when building Headlamp, to change its default behavior.
+
+### Update Checks
+
+When in the **desktop app**, by default, Headlamp will check for new versions from its Github page and warn the user about it,
+as well as showing the release notes after updating to a new version.
+
+This behavior can be turned off by adding a the following to a `.env` file in the `app/` folder:
+
+```
+HEADLAMP_CHECK_FOR_UPDATES=false
+```

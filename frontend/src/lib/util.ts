@@ -1,5 +1,4 @@
-import TimeAgo from 'javascript-time-ago';
-import en from 'javascript-time-ago/locale/en';
+import humanizeDuration from 'humanize-duration';
 import { JSONPath } from 'jsonpath-plus';
 import React from 'react';
 import { matchPath } from 'react-router';
@@ -9,26 +8,77 @@ import { ApiError } from './k8s/apiProxy';
 import { KubeMetrics, KubeObjectInterface, Workload } from './k8s/cluster';
 import Node from './k8s/node';
 import { parseCpu, parseRam, unparseCpu, unparseRam } from './units';
-TimeAgo.addLocale(en);
 
 // @todo: these are exported to window.pluginLib.
 
-const TIME_AGO = new TimeAgo();
+const humanize = humanizeDuration.humanizer();
+humanize.languages['en-mini'] = {
+  y: () => 'y',
+  mo: () => 'mo',
+  w: () => 'w',
+  d: () => 'd',
+  h: () => 'h',
+  m: () => 'm',
+  s: () => 's',
+  ms: () => 'ms',
+};
 
 export const CLUSTER_ACTION_GRACE_PERIOD = 5000; // ms
 
-type DateParam = string | number | Date;
+export type DateParam = string | number | Date;
 
-export function timeAgo(date: DateParam) {
-  return TIME_AGO.format(new Date(date), 'time');
+export type DateFormatOptions = 'brief' | 'mini';
+
+export interface TimeAgoOptions {
+  format?: DateFormatOptions;
+}
+
+/**
+ * Show the time passed since the given date, in the desired format.
+ *
+ * @param date - The date since which to calculate the duration.
+ * @param options - `format` takes "brief" or "mini". "brief" rounds the date and uses the largest suitable unit (e.g. "4 weeks"). "mini" uses something like "4w" (for 4 weeks).
+ * @returns The formatted date.
+ */
+export function timeAgo(date: DateParam, options: TimeAgoOptions = {}) {
+  const { format = 'brief' } = options;
+
+  const fromDate = new Date(date);
+  let now = new Date();
+
+  if (!!process.env.TEST_TZ) {
+    // For testing, we consider the current moment to be 3 months from the dates we are testing.
+    const days = 24 * 3600 * 1000; // in ms
+    now = new Date(fromDate.getTime() + 90 * days);
+  }
+
+  if (format === 'brief') {
+    return humanize(now.getTime() - fromDate.getTime(), {
+      fallbacks: ['en'],
+      round: true,
+      largest: 1,
+    });
+  }
+
+  return humanize(now.getTime() - fromDate.getTime(), {
+    language: 'en-mini',
+    spacer: '',
+    fallbacks: ['en'],
+    round: true,
+    largest: 1,
+  });
 }
 
 export function localeDate(date: DateParam) {
+  const options: Intl.DateTimeFormatOptions = { timeZoneName: 'short' };
+
   if (process.env.TEST_TZ) {
-    return new Date(date).toLocaleString('en-US', { timeZone: 'UTC' });
+    options.timeZone = 'UTC';
   } else {
-    return new Date(date).toLocaleString();
+    options.timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   }
+
+  return new Date(date).toLocaleString(undefined, options);
 }
 
 export function getPercentStr(value: number, total: number) {
@@ -96,6 +146,7 @@ export function filterResource(
   if (matches && filter.search) {
     const filterString = filter.search.toLowerCase();
     const usedMatchCriteria = [
+      item.metadata.uid.toLowerCase(),
       item.metadata.namespace ? item.metadata.namespace.toLowerCase() : '',
       item.metadata.name.toLowerCase(),
       ...Object.keys(item.metadata.labels || {}).map(item => item.toLowerCase()),
@@ -116,10 +167,10 @@ export function filterResource(
 
       // Include matches values in the criteria
       values.forEach((value: any) => {
-        if (typeof value === 'string') {
+        if (typeof value === 'string' || typeof value === 'number') {
           // Don't use empty string, otherwise it'll match everything
           if (value !== '') {
-            usedMatchCriteria.push(value.toLowerCase());
+            usedMatchCriteria.push(value.toString().toLowerCase());
           }
         } else if (Array.isArray(value)) {
           value.forEach((elem: any) => {
@@ -178,3 +229,7 @@ export function useErrorState(dependentSetter?: (...args: any) => void) {
   // Adding "as any" here because it was getting difficult to validate the setter type.
   return [error, setError as any];
 }
+
+// Make units available from here
+export * as auth from './auth';
+export * as units from './units';

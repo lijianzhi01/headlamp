@@ -1,8 +1,9 @@
-import { SidebarEntry } from '../../redux/reducers/ui';
+import _ from 'lodash';
 import store from '../../redux/stores/store';
+import { SidebarItemProps } from '../Sidebar';
 
 function prepareRoutes(t: (arg: string) => string) {
-  const LIST_ITEMS: SidebarEntry[] = [
+  const LIST_ITEMS: SidebarItemProps[] = [
     {
       name: 'cluster',
       label: t('glossary|Cluster'),
@@ -121,10 +122,12 @@ function prepareRoutes(t: (arg: string) => string) {
   ];
 
   const items = store.getState().ui.sidebar.entries;
+  const filters = store.getState().ui.sidebar.filters;
   // @todo: Find a better way to avoid modifying the objects in LIST_ITEMS.
-  const routes: SidebarEntry[] = JSON.parse(JSON.stringify(LIST_ITEMS));
+  const routes: SidebarItemProps[] = JSON.parse(JSON.stringify(LIST_ITEMS));
 
-  for (const item of Object.values(items)) {
+  for (const i of Object.values(items)) {
+    const item = _.cloneDeep(i);
     const parent = item.parent ? routes.find(({ name }) => name === item.parent) : null;
     let placement = routes;
     if (parent) {
@@ -137,8 +140,24 @@ function prepareRoutes(t: (arg: string) => string) {
 
     placement.push(item);
   }
+  // Filter the routes, if we have any filters.
+  const filteredRoutes = [];
+  for (const route of routes) {
+    const routeFiltered =
+      filters.length > 0 && filters.filter(f => f(route)).length !== filters.length;
+    if (routeFiltered) {
+      continue;
+    }
 
-  return routes;
+    const newSubList = route.subList?.filter(
+      subRoute =>
+        !(filters.length > 0 && filters.filter(f => f(subRoute)).length !== filters.length)
+    );
+    route.subList = newSubList;
+
+    filteredRoutes.push(route);
+  }
+  return filteredRoutes;
 }
 
 export default prepareRoutes;

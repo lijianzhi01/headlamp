@@ -61,19 +61,26 @@ export interface Route {
   exact?: boolean;
   /** Human readable name. Capitalized and short. */
   name?: string;
-  /** In case this route does *not* need a cluster prefix and context. */
+  /**
+   * In case this route does *not* need a cluster prefix and context.
+   * @deprecated please use useClusterURL.
+   */
   noCluster?: boolean;
+  /**
+   * Should URL have the cluster prefix? (default=true)
+   */
+  useClusterURL?: boolean;
   /** This route does not require Authentication. */
   noAuthRequired?: boolean;
   /** The sidebar group this Route should be in, or null if it is in no group. */
   sidebar: string | null;
   /** Shown component for this route. */
   component: () => JSX.Element;
+  /** Hide the appbar at the top. */
+  hideAppBar?: boolean;
 }
 
-// Note: Please update interface in plugins-pkg/types/lib/router.d.ts if you change Route.
-
-export const ROUTES: {
+const defaultRoutes: {
   [routeName: string]: Route;
 } = {
   cluster: {
@@ -86,8 +93,9 @@ export const ROUTES: {
   chooser: {
     path: '/',
     exact: true,
+    name: 'Choose a cluster',
     sidebar: null,
-    noCluster: true,
+    useClusterURL: false,
     noAuthRequired: true,
     component: () => (
       <Chooser useCover open>
@@ -430,20 +438,50 @@ export const ROUTES: {
 export const NotFoundRoute = {
   path: '*',
   exact: true,
+  name: `Whoops! This page doesn't exist`,
   component: () => <NotFoundComponent />,
   sidebar: null,
   noAuthRequired: true,
 };
 
 export function getRoute(routeName: string) {
-  return ROUTES[routeName];
+  let routeKey = routeName;
+  for (const key in defaultRoutes) {
+    if (key.toLowerCase() === routeName.toLowerCase()) {
+      if (key !== routeName) {
+        console.warn(`Route name ${routeName} and ${key} are not matching`);
+      }
+      routeKey = key;
+      break;
+    }
+  }
+  return defaultRoutes[routeKey];
+}
+
+/**
+ * Should the route use a cluster URL?
+ *
+ * @param route
+ * @returns true when a cluster URL contains cluster in the URL. eg. /c/minikube/my-url
+ *   false, the URL does not contain the cluster. eg. /my-url
+ */
+export function getRouteUseClusterURL(route: Route): boolean {
+  if (route.useClusterURL === undefined && route.noCluster !== undefined) {
+    console.warn('Route.noCluster is deprecated. Please use route.useClusterURL instead.');
+    return route.noCluster;
+  }
+  if (route.useClusterURL === undefined) {
+    // default is true, so undefined === true.
+    return true;
+  }
+  return route.useClusterURL;
 }
 
 export function getRoutePath(route: Route) {
   if (route.path === NotFoundRoute.path) {
     return route.path;
   }
-  if (route.noCluster) {
+  if (!getRouteUseClusterURL(route)) {
     return route.path;
   }
 
@@ -463,8 +501,8 @@ export function createRouteURL(routeName: string, params: RouteURLProps = {}) {
     return '';
   }
 
-  let cluster: string | null = null;
-  if (!route.noCluster) {
+  let cluster: string | null = params.cluster || null;
+  if (!cluster && getRouteUseClusterURL(route)) {
     cluster = getCluster();
     if (!cluster) {
       return '/';
@@ -473,14 +511,20 @@ export function createRouteURL(routeName: string, params: RouteURLProps = {}) {
   const fullParams = {
     ...params,
   };
-  if (cluster) {
+
+  // Add cluster to the params if it is not already there
+  if (!fullParams.cluster && !!cluster) {
     fullParams.cluster = cluster;
   }
   // if fullParams is empty it means it is a request for generating choser
   // route
   if (_.isEmpty(fullParams)) {
-    return generatePath(ROUTES['chooser'].path);
+    return generatePath(defaultRoutes['chooser'].path);
   }
   const url = getRoutePath(route);
   return generatePath(url, fullParams);
+}
+
+export function getDefaultRoutes() {
+  return defaultRoutes;
 }

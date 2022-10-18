@@ -1,11 +1,13 @@
 import Button from '@material-ui/core/Button';
 import { makeStyles } from '@material-ui/core/styles';
-import SvgIcon from '@material-ui/core/SvgIcon';
 import useMediaQuery from '@material-ui/core/useMediaQuery';
-import React from 'react';
+import { isValidElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ReactComponent as LogoLight } from '../../resources/icon-light.svg';
-import { ReactComponent as LogoWithTextLight } from '../../resources/logo-light.svg';
+import { getThemeName } from '../../lib/themes';
+import { useTypedSelector } from '../../redux/reducers/reducers';
+import { EmptyContent } from '../common';
+import ErrorBoundary from '../common/ErrorBoundary';
+import AppLogo from './AppLogo';
 
 const useStyle = makeStyles(theme => ({
   toolbar: {
@@ -28,6 +30,8 @@ const useStyle = makeStyles(theme => ({
       props.isSmall && !props.isSidebarOpen ? 0 : '6px 8px',
     minWidth: (props: { isSidebarOpen: boolean; isSmall: boolean }) =>
       props.isSmall && !props.isSidebarOpen ? 55 : 64,
+    // Useful for when the button has text.
+    color: theme.palette.primary.contrastText,
   },
 }));
 
@@ -38,12 +42,21 @@ export interface HeadlampButtonProps {
   mobileOnly?: boolean;
   /** Called when sidebar toggles between open and closed. */
   onToggleOpen: () => void;
+  /** Whether the button is to be disabled or not. */
+  disabled?: boolean;
 }
 
-export default function HeadlampButton({ open, onToggleOpen, mobileOnly }: HeadlampButtonProps) {
+export default function HeadlampButton({
+  open,
+  onToggleOpen,
+  mobileOnly,
+  disabled = false,
+}: HeadlampButtonProps) {
   const isSmall = useMediaQuery('(max-width:600px)');
   const classes = useStyle({ isSidebarOpen: open, isSmall: isSmall });
   const { t } = useTranslation('sidebar');
+  const arePluginsLoaded = useTypedSelector(state => state.ui.pluginsLoaded);
+  const PluginAppLogoComponent = useTypedSelector(state => state.ui.branding.logo);
 
   if (mobileOnly && (!isSmall || (isSmall && open))) {
     return null;
@@ -55,12 +68,30 @@ export default function HeadlampButton({ open, onToggleOpen, mobileOnly }: Headl
         onClick={onToggleOpen}
         className={classes.button}
         aria-label={open ? t('Shrink sidebar') : t('Expand sidebar')}
+        disabled={disabled}
       >
-        <SvgIcon
-          className={classes.logo}
-          component={open ? LogoWithTextLight : LogoLight}
-          viewBox="0 0 auto 32"
-        />
+        <ErrorBoundary>
+          {
+            // Till all plugins are not loaded show empty content for logo as we might have logo coming from a plugin
+            !arePluginsLoaded ? (
+              <EmptyContent />
+            ) : PluginAppLogoComponent ? (
+              isValidElement(PluginAppLogoComponent) ? (
+                // If it's an element, just use it.
+                PluginAppLogoComponent
+              ) : (
+                // It is a component, so we make it here.
+                <PluginAppLogoComponent
+                  logoType={open ? 'large' : 'small'}
+                  themeName={getThemeName()}
+                  className={classes.logo}
+                />
+              )
+            ) : (
+              <AppLogo logoType={open ? 'large' : 'small'} className={classes.logo} />
+            )
+          }
+        </ErrorBoundary>
       </Button>
     </div>
   );

@@ -79,6 +79,7 @@ const commonRules = {
     tables: {
       headerText: '#474747',
     },
+    notificationBorderColor: 'rgba(0,0,0,0.12)',
   },
   typography: {
     fontFamily: ['Overpass', 'sans-serif'].join(', '),
@@ -130,6 +131,7 @@ const darkTheme = createTheme({
     resourceToolTip: {
       color: 'rgba(255, 255, 255, 0.87)',
     },
+    notificationBorderColor: 'rgba(255,255,255,0.12)',
     type: 'dark',
   },
 });
@@ -162,12 +164,13 @@ export function usePrefersColorScheme() {
   return value;
 }
 
+type ThemeUnion = 'light' | 'dark';
 /**
  * Hook gets theme based on user preference, and also OS/Browser preference.
  * @returns 'light' | 'dark' theme name
  */
-export function getThemeName(): string {
-  const themePreference: string = localStorage.headlampThemePreference;
+export function getThemeName(): ThemeUnion {
+  const themePreference: ThemeUnion = localStorage.headlampThemePreference;
 
   if (typeof window.matchMedia !== 'function') {
     return 'light';
@@ -175,7 +178,7 @@ export function getThemeName(): string {
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
 
-  let themeName = 'light';
+  let themeName: ThemeUnion = 'light';
   if (themePreference) {
     // A selected theme preference takes precedence.
     themeName = themePreference;
@@ -185,6 +188,9 @@ export function getThemeName(): string {
     } else if (prefersDark) {
       themeName = 'dark';
     }
+  }
+  if (!['light', 'dark'].includes(themeName)) {
+    themeName = 'light';
   }
 
   return themeName;

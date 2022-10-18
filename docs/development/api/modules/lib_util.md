@@ -4,19 +4,45 @@ linkTitle: "lib/util"
 slug: "lib_util"
 ---
 
+## Namespaces
+
+- [auth](lib_util.auth.md)
+- [units](lib_util.units.md)
+
 ## Interfaces
 
 - [FilterState](../interfaces/lib_util.FilterState.md)
+- [TimeAgoOptions](../interfaces/lib_util.TimeAgoOptions.md)
+
+## Type aliases
+
+### DateFormatOptions
+
+Ƭ **DateFormatOptions**: ``"brief"`` \| ``"mini"``
+
+#### Defined in
+
+[lib/util.ts:30](https://github.com/kinvolk/headlamp/blob/ba073244/frontend/src/lib/util.ts#L30)
+
+___
+
+### DateParam
+
+Ƭ **DateParam**: `string` \| `number` \| `Date`
+
+#### Defined in
+
+[lib/util.ts:28](https://github.com/kinvolk/headlamp/blob/ba073244/frontend/src/lib/util.ts#L28)
 
 ## Variables
 
 ### CLUSTER\_ACTION\_GRACE\_PERIOD
 
-• **CLUSTER\_ACTION\_GRACE\_PERIOD**: ``5000``
+• `Const` **CLUSTER\_ACTION\_GRACE\_PERIOD**: ``5000``
 
 #### Defined in
 
-[lib/util.ts:18](https://github.com/kinvolk/headlamp/blob/d0c9391/frontend/src/lib/util.ts#L18)
+[lib/util.ts:26](https://github.com/kinvolk/headlamp/blob/ba073244/frontend/src/lib/util.ts#L26)
 
 ## Functions
 
@@ -28,7 +54,7 @@ slug: "lib_util"
 
 | Name | Type |
 | :------ | :------ |
-| `item` | `KubeObjectInterface` |
+| `item` | [`KubeObjectInterface`](../interfaces/lib_k8s_cluster.KubeObjectInterface.md) |
 | `filter` | [`FilterState`](../interfaces/lib_util.FilterState.md) |
 | `matchCriteria?` | `string`[] |
 
@@ -38,7 +64,7 @@ slug: "lib_util"
 
 #### Defined in
 
-[lib/util.ts:85](https://github.com/kinvolk/headlamp/blob/d0c9391/frontend/src/lib/util.ts#L85)
+[lib/util.ts:135](https://github.com/kinvolk/headlamp/blob/ba073244/frontend/src/lib/util.ts#L135)
 
 ___
 
@@ -52,7 +78,7 @@ ___
 
 #### Defined in
 
-[lib/util.ts:153](https://github.com/kinvolk/headlamp/blob/d0c9391/frontend/src/lib/util.ts#L153)
+[lib/util.ts:204](https://github.com/kinvolk/headlamp/blob/ba073244/frontend/src/lib/util.ts#L204)
 
 ___
 
@@ -72,7 +98,7 @@ ___
 
 #### Defined in
 
-[lib/util.ts:145](https://github.com/kinvolk/headlamp/blob/d0c9391/frontend/src/lib/util.ts#L145)
+[lib/util.ts:196](https://github.com/kinvolk/headlamp/blob/ba073244/frontend/src/lib/util.ts#L196)
 
 ___
 
@@ -93,7 +119,7 @@ ___
 
 #### Defined in
 
-[lib/util.ts:34](https://github.com/kinvolk/headlamp/blob/d0c9391/frontend/src/lib/util.ts#L34)
+[lib/util.ts:84](https://github.com/kinvolk/headlamp/blob/ba073244/frontend/src/lib/util.ts#L84)
 
 ___
 
@@ -105,7 +131,7 @@ ___
 
 | Name | Type |
 | :------ | :------ |
-| `item` | `Workload` |
+| `item` | [`Workload`](lib_k8s_cluster.md#workload) |
 
 #### Returns
 
@@ -113,7 +139,7 @@ ___
 
 #### Defined in
 
-[lib/util.ts:43](https://github.com/kinvolk/headlamp/blob/d0c9391/frontend/src/lib/util.ts#L43)
+[lib/util.ts:93](https://github.com/kinvolk/headlamp/blob/ba073244/frontend/src/lib/util.ts#L93)
 
 ___
 
@@ -125,8 +151,8 @@ ___
 
 | Name | Type |
 | :------ | :------ |
-| `item` | `Node` |
-| `metrics` | `KubeMetrics`[] |
+| `item` | [`Node`](../classes/lib_k8s_node.Node.md) |
+| `metrics` | [`KubeMetrics`](../interfaces/lib_k8s_cluster.KubeMetrics.md)[] |
 | `resourceType` | ``"cpu"`` \| ``"memory"`` |
 
 #### Returns
@@ -135,7 +161,7 @@ ___
 
 #### Defined in
 
-[lib/util.ts:61](https://github.com/kinvolk/headlamp/blob/d0c9391/frontend/src/lib/util.ts#L61)
+[lib/util.ts:111](https://github.com/kinvolk/headlamp/blob/ba073244/frontend/src/lib/util.ts#L111)
 
 ___
 
@@ -156,7 +182,7 @@ ___
 
 #### Defined in
 
-[lib/util.ts:51](https://github.com/kinvolk/headlamp/blob/d0c9391/frontend/src/lib/util.ts#L51)
+[lib/util.ts:101](https://github.com/kinvolk/headlamp/blob/ba073244/frontend/src/lib/util.ts#L101)
 
 ___
 
@@ -168,7 +194,7 @@ ___
 
 | Name | Type |
 | :------ | :------ |
-| `item` | `Workload` |
+| `item` | [`Workload`](lib_k8s_cluster.md#workload) |
 
 #### Returns
 
@@ -176,7 +202,7 @@ ___
 
 #### Defined in
 
-[lib/util.ts:47](https://github.com/kinvolk/headlamp/blob/d0c9391/frontend/src/lib/util.ts#L47)
+[lib/util.ts:97](https://github.com/kinvolk/headlamp/blob/ba073244/frontend/src/lib/util.ts#L97)
 
 ___
 
@@ -188,7 +214,7 @@ ___
 
 | Name | Type |
 | :------ | :------ |
-| `date` | `DateParam` |
+| `date` | [`DateParam`](lib_util.md#dateparam) |
 
 #### Returns
 
@@ -196,27 +222,32 @@ ___
 
 #### Defined in
 
-[lib/util.ts:26](https://github.com/kinvolk/headlamp/blob/d0c9391/frontend/src/lib/util.ts#L26)
+[lib/util.ts:72](https://github.com/kinvolk/headlamp/blob/ba073244/frontend/src/lib/util.ts#L72)
 
 ___
 
 ### timeAgo
 
-▸ **timeAgo**(`date`): `string`
+▸ **timeAgo**(`date`, `options?`): `string`
+
+Show the time passed since the given date, in the desired format.
 
 #### Parameters
 
-| Name | Type |
-| :------ | :------ |
-| `date` | `DateParam` |
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `date` | [`DateParam`](lib_util.md#dateparam) | The date since which to calculate the duration. |
+| `options` | [`TimeAgoOptions`](../interfaces/lib_util.TimeAgoOptions.md) | `format` takes "brief" or "mini". "brief" rounds the date and uses the largest suitable unit (e.g. "4 weeks"). "mini" uses something like "4w" (for 4 weeks). |
 
 #### Returns
 
 `string`
 
+The formatted date.
+
 #### Defined in
 
-[lib/util.ts:22](https://github.com/kinvolk/headlamp/blob/d0c9391/frontend/src/lib/util.ts#L22)
+[lib/util.ts:43](https://github.com/kinvolk/headlamp/blob/ba073244/frontend/src/lib/util.ts#L43)
 
 ___
 
@@ -236,13 +267,13 @@ ___
 
 #### Defined in
 
-[lib/util.ts:165](https://github.com/kinvolk/headlamp/blob/d0c9391/frontend/src/lib/util.ts#L165)
+[lib/util.ts:216](https://github.com/kinvolk/headlamp/blob/ba073244/frontend/src/lib/util.ts#L216)
 
 ___
 
 ### useFilterFunc
 
-▸ **useFilterFunc**(`matchCriteria?`): (`item`: `KubeObjectInterface`) => `boolean`
+▸ **useFilterFunc**(`matchCriteria?`): (`item`: [`KubeObjectInterface`](../interfaces/lib_k8s_cluster.KubeObjectInterface.md)) => `boolean`
 
 #### Parameters
 
@@ -260,7 +291,7 @@ ___
 
 | Name | Type |
 | :------ | :------ |
-| `item` | `KubeObjectInterface` |
+| `item` | [`KubeObjectInterface`](../interfaces/lib_k8s_cluster.KubeObjectInterface.md) |
 
 ##### Returns
 
@@ -268,4 +299,4 @@ ___
 
 #### Defined in
 
-[lib/util.ts:140](https://github.com/kinvolk/headlamp/blob/d0c9391/frontend/src/lib/util.ts#L140)
+[lib/util.ts:191](https://github.com/kinvolk/headlamp/blob/ba073244/frontend/src/lib/util.ts#L191)

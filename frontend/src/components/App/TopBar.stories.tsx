@@ -6,8 +6,11 @@ import { createStore } from 'redux';
 import { PureTopBar, PureTopBarProps } from './TopBar';
 
 // eslint-disable-next-line no-unused-vars
-const store = createStore((state = { config: {} }, action) => state, {
+const store = createStore((state = { config: {}, ui: { notifications: [] } }, action) => state, {
   config: {},
+  ui: {
+    notifications: [],
+  },
 });
 
 export default {
@@ -33,21 +36,21 @@ const Template: Story<PureTopBarProps> = args => {
 
 export const NoToken = Template.bind({});
 NoToken.args = {
-  appBarActions: {},
+  appBarActions: [],
   logout: () => {},
   hasToken: false,
 };
 
 export const Token = Template.bind({});
 Token.args = {
-  appBarActions: {},
+  appBarActions: [],
   logout: () => {},
   hasToken: true,
 };
 
 export const OneCluster = Template.bind({});
 OneCluster.args = {
-  appBarActions: {},
+  appBarActions: [],
   logout: () => {},
   hasToken: true,
   cluster: 'ak8s-desktop',
@@ -56,7 +59,7 @@ OneCluster.args = {
 
 export const TwoCluster = Template.bind({});
 TwoCluster.args = {
-  appBarActions: {},
+  appBarActions: [],
   logout: () => {},
   hasToken: true,
   cluster: 'ak8s-desktop',

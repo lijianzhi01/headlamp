@@ -1,49 +1,69 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
+import { useDispatch } from 'react-redux';
 import { Redirect, Route, RouteProps, Switch } from 'react-router-dom';
 import { getToken } from '../../lib/auth';
 import { useClustersConf } from '../../lib/k8s';
-import { createRouteURL, getRoutePath, NotFoundRoute, ROUTES } from '../../lib/router';
+import {
+  createRouteURL,
+  getDefaultRoutes,
+  getRoutePath,
+  getRouteUseClusterURL,
+  NotFoundRoute,
+  Route as RouteType,
+} from '../../lib/router';
 import { getCluster } from '../../lib/util';
+import { setHideAppBar } from '../../redux/actions/actions';
 import { useTypedSelector } from '../../redux/reducers/reducers';
 import { useSidebarItem } from '../Sidebar';
 
 export default function RouteSwitcher() {
   // The NotFoundRoute always has to be evaluated in the last place.
-  const defaultRoutes = Object.values(ROUTES).concat(NotFoundRoute);
   const routes = useTypedSelector(state => state.ui.routes);
+  const routeFilters = useTypedSelector(state => state.ui.routeFilters);
+  const defaultRoutes = Object.values(getDefaultRoutes()).concat(NotFoundRoute);
+  const filteredRoutes = Object.values(routes)
+    .concat(defaultRoutes)
+    .filter(
+      route =>
+        !(
+          routeFilters.length > 0 &&
+          routeFilters.filter(f => f(route)).length !== routeFilters.length
+        )
+    );
 
   return (
     <Switch>
-      {Object.values(routes)
-        .concat(defaultRoutes)
-        .map((route, index) =>
-          route.name === 'OidcAuth' ? (
-            <Route
-              path={route.path}
-              component={() => (
-                <PageTitle title={route.name ? route.name : route.sidebar}>
-                  <route.component />
-                </PageTitle>
-              )}
-              key={index}
-            />
-          ) : (
-            <AuthRoute
-              key={index}
-              path={getRoutePath(route)}
-              sidebar={route.sidebar}
-              requiresAuth={!route.noAuthRequired}
-              requiresCluster={!route.noCluster}
-              exact={!!route.exact}
-              children={
-                <PageTitle title={route.name ? route.name : route.sidebar}>
-                  <route.component />
-                </PageTitle>
-              }
-            />
-          )
-        )}
+      {filteredRoutes.map((route, index) =>
+        route.name === 'OidcAuth' ? (
+          <Route path={route.path} component={() => <RouteComponent route={route} />} key={index} />
+        ) : (
+          <AuthRoute
+            path={getRoutePath(route)}
+            sidebar={route.sidebar}
+            requiresAuth={!route.noAuthRequired}
+            requiresCluster={getRouteUseClusterURL(route)}
+            exact={!!route.exact}
+            children={<RouteComponent route={route} />}
+            key={index}
+          />
+        )
+      )}
     </Switch>
+  );
+}
+
+function RouteComponent({ route }: { route: RouteType }) {
+  const { t } = useTranslation('frequent');
+  const dispatch = useDispatch();
+  React.useEffect(() => {
+    dispatch(setHideAppBar(route.hideAppBar));
+  }, [route.hideAppBar]);
+
+  return (
+    <PageTitle title={t(route.name ? route.name : route.sidebar ? route.sidebar : '')}>
+      <route.component />
+    </PageTitle>
   );
 }
 

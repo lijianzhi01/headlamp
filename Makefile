@@ -4,9 +4,10 @@ export GO111MODULE
 SERVER_EXE_EXT ?=
 DOCKER_CMD ?= docker
 DOCKER_REPO ?= ghcr.io/kinvolk
+DOCKER_EXT_REPO ?= docker.io/kinvolk
 DOCKER_IMAGE_NAME ?= headlamp
 DOCKER_IMAGE_VERSION ?= $(shell git describe --tags --always --dirty)
-DOCKER_IMAGE_BASE ?= alpine:3.15.0
+DOCKER_IMAGE_BASE ?= alpine:3.15.4
 
 ifeq ($(OS), Windows_NT)
 	SERVER_EXE_EXT = .exe
@@ -29,6 +30,8 @@ app: app-build
 	cd app && npm run package -- --win --linux --mac
 app-win: app-build
 	cd app && npm run package -- --win
+app-win-msi: app-build
+	cd app && npm run package-msi
 app-linux: app-build
 	cd app && npm run package -- --linux
 app-mac: app-build
@@ -36,7 +39,7 @@ app-mac: app-build
 
 .PHONY: backend
 backend:
-	cd backend && go build -o ./server${SERVER_EXE_EXT} ./cmd
+	cd backend && go build -o ./headlamp-server${SERVER_EXE_EXT} ./cmd
 
 frontend-install:
 	cd frontend && npm install
@@ -52,8 +55,12 @@ frontend: frontend-install
 frontend-build:
 	cd frontend && npm run build
 
+.PHONY: frontend-build-storybook
+frontend-build-storybook:
+	cd frontend && npm run build-storybook
+
 run-backend:
-	./backend/server -dev
+	./backend/headlamp-server -dev
 
 run-frontend:
 	cd frontend && npm start
@@ -72,7 +79,8 @@ frontend-test:
 	cd frontend && npm run test -- --coverage
 
 plugins-test:
-	cd plugins/headlamp-plugin && npm install && ./test-headlamp-plugin.sh
+	cd plugins/headlamp-plugin && npm install && ./test-headlamp-plugin.js
+	cd plugins/headlamp-plugin && ./test-plugins-examples.sh
 
 image:
 	$(DOCKER_CMD) build \
@@ -80,6 +88,16 @@ image:
 	-t $(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_VERSION) -f \
 	Dockerfile \
 	.
+
+docker-ext:
+	$(eval LATEST_TAG=$(shell git tag --list --sort=version:refname 'v*' | tail -1))
+	$(DOCKER_CMD) buildx build \
+	--platform=linux/amd64,linux/arm64 \
+	--push \
+	-t $(DOCKER_EXT_REPO)/$(DOCKER_IMAGE_NAME)-dd-extension:${LATEST_TAG} \
+	-t $(DOCKER_EXT_REPO)/$(DOCKER_IMAGE_NAME)-dd-extension:latest -f \
+	./docker-extension/Dockerfile \
+	./docker-extension 
 
 .PHONY: docs
 docs:

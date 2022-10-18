@@ -5,7 +5,7 @@ import ListItemIcon from '@material-ui/core/ListItemIcon';
 import ListItemText from '@material-ui/core/ListItemText';
 import Menu from '@material-ui/core/Menu';
 import MenuItem from '@material-ui/core/MenuItem';
-import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
+import { createStyles, makeStyles, Theme, useTheme } from '@material-ui/core/styles';
 import Toolbar from '@material-ui/core/Toolbar';
 import useMediaQuery from '@material-ui/core/useMediaQuery';
 import clsx from 'clsx';
@@ -13,14 +13,21 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { useHistory } from 'react-router-dom';
+import helpers from '../../helpers';
 import LocaleSelect from '../../i18n/LocaleSelect/LocaleSelect';
 import { getToken, setToken } from '../../lib/auth';
-import { useCluster } from '../../lib/k8s';
-import { setWhetherSidebarOpen } from '../../redux/actions/actions';
+import { useCluster, useClustersConf } from '../../lib/k8s';
+import {
+  HeaderActionType,
+  setVersionDialogOpen,
+  setWhetherSidebarOpen,
+} from '../../redux/actions/actions';
 import { useTypedSelector } from '../../redux/reducers/reducers';
 import { ClusterTitle } from '../cluster/Chooser';
+import ErrorBoundary from '../common/ErrorBoundary';
 import { drawerWidth } from '../Sidebar';
 import HeadlampButton from '../Sidebar/HeadlampButton';
+import Notifications from './Notifications';
 import ThemeChangeButton from './ThemeChangeButton';
 
 export interface TopBarProps {}
@@ -34,7 +41,9 @@ export default function TopBar({}: TopBarProps) {
   const isSidebarOpenUserSelected = useTypedSelector(
     state => state.ui.sidebar.isSidebarOpenUserSelected
   );
+  const hideAppBar = useTypedSelector(state => state.ui.hideAppBar);
 
+  const clustersConfig = useClustersConf();
   const cluster = useCluster();
   const history = useHistory();
 
@@ -49,6 +58,9 @@ export default function TopBar({}: TopBarProps) {
     history.push('/');
   }
 
+  if (hideAppBar) {
+    return null;
+  }
   return (
     <PureTopBar
       appBarActions={appBarActions}
@@ -67,15 +79,15 @@ export default function TopBar({}: TopBarProps) {
 
         dispatch(setWhetherSidebarOpen(!openSideBar));
       }}
+      cluster={cluster || undefined}
+      clusters={clustersConfig || undefined}
     />
   );
 }
 
 export interface PureTopBarProps {
   /** If the sidebar is fully expanded open or shrunk. */
-  appBarActions: {
-    [name: string]: (...args: any[]) => JSX.Element | null;
-  };
+  appBarActions: HeaderActionType[];
   logout: () => void;
   hasToken: boolean;
 
@@ -114,8 +126,67 @@ const useStyles = makeStyles((theme: Theme) =>
       display: 'flex',
       justifyContent: 'center',
     },
+    versionLink: {
+      backgroundColor: theme.palette.background.default,
+      color: theme.palette.text.primary,
+      textAlign: 'center',
+    },
+    userMenu: {
+      '& .MuiMenu-list': {
+        paddingBottom: 0,
+      },
+    },
   })
 );
+
+function AppBarActionsMenu({ appBarActions }: { appBarActions: HeaderActionType[] }) {
+  const actions = (function stateActions() {
+    return React.Children.toArray(
+      appBarActions.map(Action => {
+        if (React.isValidElement(Action)) {
+          return (
+            <ErrorBoundary>
+              <MenuItem>{Action}</MenuItem>
+            </ErrorBoundary>
+          );
+        } else if (Action === null) {
+          return null;
+        } else {
+          return (
+            <ErrorBoundary>
+              <MenuItem>
+                <Action />
+              </MenuItem>
+            </ErrorBoundary>
+          );
+        }
+      })
+    );
+  })();
+
+  return <>{actions}</>;
+}
+function AppBarActions({ appBarActions }: { appBarActions: HeaderActionType[] }) {
+  const actions = (function stateActions() {
+    return React.Children.toArray(
+      appBarActions.map(Action => {
+        if (React.isValidElement(Action)) {
+          return <ErrorBoundary>{Action}</ErrorBoundary>;
+        } else if (Action === null) {
+          return null;
+        } else {
+          return (
+            <ErrorBoundary>
+              <Action />
+            </ErrorBoundary>
+          );
+        }
+      })
+    );
+  })();
+
+  return <>{actions}</>;
+}
 
 export function PureTopBar({
   appBarActions,
@@ -128,13 +199,13 @@ export function PureTopBar({
   onToggleOpen,
 }: PureTopBarProps) {
   const { t } = useTranslation('frequent');
-  const isSmall = useMediaQuery('(max-width:960px)');
-  const isMedium = useMediaQuery('(max-width:960px)');
+  const theme = useTheme();
+  const isSmall = useMediaQuery(theme.breakpoints.down('sm'));
+  const dispatch = useDispatch();
 
-  const openSideBar =
-    isMedium && !!(isSidebarOpenUserSelected === undefined ? false : isSidebarOpen);
+  const openSideBar = !!(isSidebarOpenUserSelected === undefined ? false : isSidebarOpen);
 
-  const classes = useStyles({ isSidebarOpen: openSideBar, isSmall });
+  const classes = useStyles({ isSidebarOpen, isSmall });
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const [mobileMoreAnchorEl, setMobileMoreAnchorEl] = React.useState<null | HTMLElement>(null);
 
@@ -172,6 +243,7 @@ export function PureTopBar({
         handleMobileMenuClose();
       }}
       style={{ zIndex: 1400 }}
+      className={classes.userMenu}
     >
       <MenuItem
         component="a"
@@ -186,6 +258,19 @@ export function PureTopBar({
           <Icon icon="mdi:logout" />
         </ListItemIcon>
         <ListItemText primary={t('Log out')} secondary={hasToken ? null : t('(No token set up)')} />
+      </MenuItem>
+      <MenuItem
+        component="a"
+        onClick={() => {
+          dispatch(setVersionDialogOpen(true));
+          handleMenuClose();
+        }}
+        dense
+        className={classes.versionLink}
+      >
+        <ListItemText>
+          {helpers.getProductName()} {helpers.getVersion()['VERSION']}
+        </ListItemText>
       </MenuItem>
     </Menu>
   );
@@ -204,11 +289,10 @@ export function PureTopBar({
       <MenuItem>
         <ClusterTitle cluster={cluster} clusters={clusters} />
       </MenuItem>
-      {Object.values(appBarActions).map((action, i) => (
-        <MenuItem>
-          <React.Fragment key={i}>{action()}</React.Fragment>
-        </MenuItem>
-      ))}
+      <AppBarActionsMenu appBarActions={appBarActions} />
+      <MenuItem>
+        <Notifications />
+      </MenuItem>
       <MenuItem>
         <LocaleSelect />
       </MenuItem>
@@ -239,18 +323,15 @@ export function PureTopBar({
         aria-label={t('Appbar Tools')}
       >
         <Toolbar className={classes.toolbar}>
-          {isMedium && <HeadlampButton open={openSideBar} mobileOnly onToggleOpen={onToggleOpen} />}
+          {isSmall && <HeadlampButton open={openSideBar} mobileOnly onToggleOpen={onToggleOpen} />}
 
-          {!isMedium && (
+          {!isSmall && (
             <>
               <div className={clsx(classes.grow, classes.clusterTitle)}>
                 <ClusterTitle cluster={cluster} clusters={clusters} />
               </div>
-              {Object.values(appBarActions).map((action, i) => (
-                <MenuItem>
-                  <React.Fragment key={i}>{action()}</React.Fragment>
-                </MenuItem>
-              ))}
+              <AppBarActions appBarActions={appBarActions} />
+              <Notifications />
               <LocaleSelect />
               <ThemeChangeButton />
               <IconButton
@@ -265,7 +346,7 @@ export function PureTopBar({
               </IconButton>
             </>
           )}
-          {isMedium && (
+          {isSmall && (
             <>
               <div className={classes.grow} />
               <IconButton
@@ -282,7 +363,7 @@ export function PureTopBar({
         </Toolbar>
       </AppBar>
       {renderUserMenu}
-      {isMedium && renderMobileMenu}
+      {isSmall && renderMobileMenu}
     </>
   );
 }

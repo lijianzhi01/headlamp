@@ -125,9 +125,12 @@ exports[`Storyshots crd/CustomResourceDetails No Error 1`] = `
               >
                 <div
                   class="MuiGrid-root MuiGrid-item"
+                />
+                <div
+                  class="MuiGrid-root MuiGrid-item"
                 >
                   <button
-                    aria-label="show yaml viewer"
+                    aria-label="View YAML"
                     class="MuiButtonBase-root MuiIconButton-root MuiIconButton-edgeEnd"
                     tabindex="0"
                     title="View YAML"
@@ -166,14 +169,15 @@ exports[`Storyshots crd/CustomResourceDetails No Error 1`] = `
                   <tr
                     class="MuiTableRow-root"
                   >
-                    <td
+                    <th
                       class="MuiTableCell-root MuiTableCell-body makeStyles-metadataNameCell"
+                      role="cell"
+                      scope="row"
                     >
                       Name
-                    </td>
+                    </th>
                     <td
                       class="MuiTableCell-root MuiTableCell-body makeStyles-metadataCell"
-                      scope="row"
                     >
                       <span
                         class="MuiTypography-root makeStyles-valueLabel MuiTypography-body1"
@@ -185,14 +189,15 @@ exports[`Storyshots crd/CustomResourceDetails No Error 1`] = `
                   <tr
                     class="MuiTableRow-root"
                   >
-                    <td
+                    <th
                       class="MuiTableCell-root MuiTableCell-body makeStyles-metadataNameCell"
+                      role="cell"
+                      scope="row"
                     >
                       Namespace
-                    </td>
+                    </th>
                     <td
                       class="MuiTableCell-root MuiTableCell-body makeStyles-metadataCell"
-                      scope="row"
                     >
                       <span
                         class="MuiTypography-root makeStyles-valueLabel MuiTypography-body1"
@@ -204,53 +209,43 @@ exports[`Storyshots crd/CustomResourceDetails No Error 1`] = `
                   <tr
                     class="MuiTableRow-root"
                   >
-                    <td
+                    <th
                       class="MuiTableCell-root MuiTableCell-body makeStyles-metadataNameCell"
+                      role="cell"
+                      scope="row"
                     >
                       Creation
-                    </td>
+                    </th>
                     <td
                       class="MuiTableCell-root MuiTableCell-body makeStyles-metadataCell"
-                      scope="row"
                     >
                       <span
                         class="MuiTypography-root makeStyles-valueLabel MuiTypography-body1"
                       >
-                        12/15/2021, 2:57:13 PM
+                        12/15/2021, 2:57:13 PM UTC
                       </span>
                     </td>
                   </tr>
                   <tr
                     class="MuiTableRow-root"
                   >
-                    <td
+                    <th
                       class="MuiTableCell-root MuiTableCell-body makeStyles-metadataNameCell"
-                    >
-                      Test Col
-                    </td>
-                    <td
-                      class="MuiTableCell-root MuiTableCell-body makeStyles-metadataCell"
+                      role="cell"
                       scope="row"
                     >
-                      <div
-                        class="MuiGrid-root MuiGrid-container MuiGrid-spacing-xs-1"
+                      Test Col
+                    </th>
+                    <td
+                      class="MuiTableCell-root MuiTableCell-body makeStyles-metadataCell"
+                    >
+                      <p
+                        class="MuiTypography-root makeStyles-noWrap MuiTypography-body1"
+                        title="My description"
                       >
-                        <div
-                          class="MuiGrid-root MuiGrid-item"
-                        >
-                          mycustomresource
-                        </div>
-                        <div
-                          class="MuiGrid-root MuiGrid-item"
-                        >
-                          <div
-                            class="MuiBox-root MuiBox-root"
-                            title="My description"
-                          >
-                            <span />
-                          </div>
-                        </div>
-                      </div>
+                        mycustomresource
+                        <span />
+                      </p>
                     </td>
                   </tr>
                 </tbody>

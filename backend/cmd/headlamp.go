@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -17,11 +18,14 @@ import (
 	"os/user"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	oidc "github.com/coreos/go-oidc"
+	"github.com/gobwas/glob"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	"golang.org/x/oauth2"
 )
@@ -31,7 +35,7 @@ type HeadlampConfig struct {
 	devMode          bool
 	insecure         bool
 	kubeConfigPath   string
-	port             string
+	port             uint
 	staticDir        string
 	pluginDir        string
 	oidcClientID     string
@@ -39,6 +43,9 @@ type HeadlampConfig struct {
 	oidcScopes       []string
 	oidcIdpIssuerURL string
 	baseURL          string
+	// Holds: context-name -> (context, reverse-proxy)
+	contextProxies map[string]contextProxy
+	proxyURLs      []string
 }
 
 type clientConfig struct {
@@ -49,6 +56,11 @@ type spaHandler struct {
 	staticPath string
 	indexPath  string
 	baseURL    string
+}
+
+type contextProxy struct {
+	context *Context
+	proxy   *httputil.ReverseProxy
 }
 
 var pluginListURLs []string
@@ -102,7 +114,8 @@ func fileExists(filename string) bool {
 // copy a file, whilst doing some search/replace on the data.
 func copyReplace(src string, dst string,
 	search []byte, replace []byte,
-	search2 []byte, replace2 []byte) {
+	search2 []byte, replace2 []byte,
+) {
 	data, err := ioutil.ReadFile(src)
 	if err != nil {
 		log.Fatal(err)
@@ -110,8 +123,9 @@ func copyReplace(src string, dst string,
 
 	data1 := bytes.ReplaceAll(data, search, replace)
 	data2 := bytes.ReplaceAll(data1, search2, replace2)
+	fileMode := 0600
 
-	err = ioutil.WriteFile(dst, data2, 0600)
+	err = ioutil.WriteFile(dst, data2, fs.FileMode(fileMode))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -169,17 +183,16 @@ func getOidcCallbackURL(r *http.Request, config *HeadlampConfig) string {
 	return fmt.Sprintf("%s://%s/oidc-callback", urlScheme, hostWithBaseURL)
 }
 
-// nolint:gocognit,funlen
-func StartHeadlampServer(config *HeadlampConfig) {
-	kubeConfigPath := ""
-
-	// If we don't have a specified kubeConfig path, and we are not running
-	// in-cluster, then use the default path.
-	if config.kubeConfigPath != "" {
-		kubeConfigPath = config.kubeConfigPath
-	} else if !config.useInCluster {
-		kubeConfigPath = GetDefaultKubeConfigPath()
+func serveWithNoCacheHeader(fs http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Cache-Control", "no-cache")
+		fs.ServeHTTP(w, r)
 	}
+}
+
+//nolint:gocognit,funlen,gocyclo
+func createHeadlampHandler(config *HeadlampConfig) http.Handler {
+	kubeConfigPath := config.kubeConfigPath
 
 	log.Printf("plugins-dir: %s\n", config.pluginDir)
 
@@ -202,22 +215,28 @@ func StartHeadlampServer(config *HeadlampConfig) {
 
 	// KubeConfig clusters
 	if kubeConfigPath != "" {
-		var err error
-
-		contextsFound, err := GetContextsFromKubeConfigFile(kubeConfigPath)
-		if err != nil {
-			log.Println("Failed to get contexts from", kubeConfigPath, err)
+		delimiter := ":"
+		if runtime.GOOS == "windows" {
+			delimiter = ";"
 		}
 
-		contexts = append(contexts, contextsFound...)
-	}
+		kubeConfigs := strings.Split(kubeConfigPath, delimiter)
 
-	clusters := make([]Cluster, 0, len(contexts))
-	for _, context := range contexts {
-		clusters = append(clusters, *context.getCluster())
-	}
+		for _, kubeConfig := range kubeConfigs {
+			kubeConfig, err := absPath(kubeConfig)
+			if err != nil {
+				log.Printf("Failed to resolve absolute path of :%s, error: %v\n", kubeConfig, err)
+				continue
+			}
 
-	clientConf := &clientConfig{clusters}
+			contextsFound, err := GetContextsFromKubeConfigFile(kubeConfig)
+			if err != nil {
+				log.Println("Failed to get contexts from", kubeConfig, err)
+			}
+
+			contexts = append(contexts, contextsFound...)
+		}
+	}
 
 	if config.staticDir != "" {
 		baseURLReplace(config.staticDir, config.baseURL)
@@ -232,43 +251,66 @@ func StartHeadlampServer(config *HeadlampConfig) {
 		r = baseRoute.PathPrefix(config.baseURL).Subrouter()
 	}
 
+	config.contextProxies = make(map[string]contextProxy)
+
 	fmt.Println("*** Headlamp Server ***")
 	fmt.Println("  API Routers:")
 
-	for i := range contexts {
-		config.addProxyForContext(&contexts[i], r)
+	if len(contexts) == 0 {
+		log.Println("No contexts/clusters configured by default!")
+	} else {
+		for i := range contexts {
+			context := &contexts[i]
+			proxy, err := config.createProxyForContext(*context)
+			if err != nil {
+				log.Printf("Error setting up proxy for context %s: %s\n", context.Name, err)
+				continue
+			}
+
+			fmt.Printf("\tlocalhost:%d%s%s/{api...} -> %s\n", config.port, config.baseURL, "/clusters/"+context.Name,
+				*context.cluster.getServer())
+
+			config.contextProxies[context.Name] = contextProxy{
+				context,
+				proxy,
+			}
+		}
 	}
 
-	var err error
+	addPluginRoutes(config, r)
 
-	pluginListURLs, err = config.getPluginListURLs()
-	if err != nil {
-		if !os.IsNotExist(err) {
-			log.Println("Error: ", err)
-		}
-		// There was error, but we don't want to keep checking the plugins
-		// again, until we deliberately do (so making the list an empty one).
-		pluginListURLs = make([]string, 0)
-	}
+	config.handleClusterRequests(r)
 
-	r.HandleFunc("/plugins/list", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		// The pluginListURLs should only be nil if we want to dynamically load it
-		// (and that's available only when not running in-cluster).
-		if !config.useInCluster && pluginListURLs == nil {
-			pluginListURLs, _ = config.getPluginListURLs()
+	r.HandleFunc("/externalproxy", func(w http.ResponseWriter, r *http.Request) {
+		url, err := url.Parse(r.Header.Get("proxy-to"))
+		if err != nil {
+			log.Fatal("Failed to get URL from server", err)
 		}
-		if err := json.NewEncoder(w).Encode(pluginListURLs); err != nil {
-			log.Println("Error encoding plugins list", err)
+		isURLContainedInProxyURLs := false
+		for _, proxyURL := range config.proxyURLs {
+			g := glob.MustCompile(proxyURL)
+			if g.Match(url.String()) {
+				isURLContainedInProxyURLs = true
+				break
+			}
 		}
-	}).Methods("GET")
+		if !isURLContainedInProxyURLs {
+			http.Error(w, "no allowed proxy url match, request denied ", http.StatusBadRequest)
+		}
+		proxy := httputil.NewSingleHostReverseProxy(url)
+		r.Host = url.Host
+		r.URL.Host = url.Host
+		r.URL.Scheme = url.Scheme
+		r.RequestURI = url.RequestURI()
 
-	// Serve plugins
-	pluginHandler := http.StripPrefix(config.baseURL+"/plugins/", http.FileServer(http.Dir(config.pluginDir)))
-	r.PathPrefix("/plugins/").Handler(pluginHandler)
+		log.Println("Requesting ", r.URL.String())
+		proxy.ServeHTTP(w, r)
+	})
 
 	// Configuration
-	r.HandleFunc("/config", clientConf.getConfig).Methods("GET")
+	r.HandleFunc("/config", config.getConfig).Methods("GET")
+
+	config.addClusterSetupRoute(r)
 
 	oauthRequestMap := make(map[string]*OauthConfig)
 
@@ -277,7 +319,7 @@ func StartHeadlampServer(config *HeadlampConfig) {
 		cluster := r.URL.Query().Get("cluster")
 		if config.insecure {
 			tr := &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // nolint:gosec
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec
 			}
 			insecureClient := &http.Client{Transport: tr}
 			ctx = oidc.ClientContext(ctx, insecureClient)
@@ -326,7 +368,7 @@ func StartHeadlampServer(config *HeadlampConfig) {
 			http.Error(w, "invalid request state is empty", http.StatusBadRequest)
 			return
 		}
-		// nolint: nestif
+		//nolint:nestif
 		if oauthConfig, ok := oauthRequestMap[state]; ok {
 			oauth2Token, err := oauthConfig.Config.Exchange(oauthConfig.Ctx, r.URL.Query().Get("code"))
 			if err != nil {
@@ -372,36 +414,71 @@ func StartHeadlampServer(config *HeadlampConfig) {
 	})
 
 	// Serve the frontend if needed
-	spa := spaHandler{staticPath: config.staticDir, indexPath: "index.html", baseURL: config.baseURL}
-	r.PathPrefix("/").Handler(spa)
+	if config.staticDir != "" {
+		spa := spaHandler{staticPath: config.staticDir, indexPath: "index.html", baseURL: config.baseURL}
+		r.PathPrefix("/").Handler(spa)
 
-	http.Handle("/", r)
-
-	var handler http.Handler
+		http.Handle("/", r)
+	}
 
 	// On dev mode we're loose about where connections come from
 	if config.devMode {
 		headers := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
 		methods := handlers.AllowedMethods([]string{"GET", "POST", "PUT", "HEAD", "DELETE", "PATCH", "OPTIONS"})
 		origins := handlers.AllowedOrigins([]string{"*"})
-		handler = handlers.CORS(headers, methods, origins)(r)
-	} else {
-		handler = r
+
+		return handlers.CORS(headers, methods, origins)(r)
 	}
 
-	// Start server
-	log.Fatal(http.ListenAndServe(":"+config.port, handler))
+	return r
 }
 
-// @todo: Evaluate whether we should just spawn a kubectl proxy for each context
-// as it would handle already the certificates, etc.
-func (c *HeadlampConfig) addProxyForContext(context *Context, r *mux.Router) {
+func StartHeadlampServer(config *HeadlampConfig) {
+	handler := createHeadlampHandler(config)
+
+	// Start server
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", config.port), handler)) //nolint:gosec
+}
+
+func (c *HeadlampConfig) handleClusterRequests(router *mux.Router) {
+	router.PathPrefix("/clusters/{clusterName}/{api:.*}").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		clusterName := mux.Vars(r)["clusterName"]
+		ctxtProxy, ok := c.contextProxies[clusterName]
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+
+		server, err := url.Parse(*ctxtProxy.context.cluster.getServer())
+		if err != nil {
+			log.Printf("Error: failed to get valid URL from server %s: %s", server, err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		handler := proxyHandler(server, ctxtProxy.proxy)
+		handler(w, r)
+	})
+}
+
+func (c *HeadlampConfig) getClusters() []Cluster {
+	clusters := make([]Cluster, 0, len(c.contextProxies))
+
+	for _, contextProxy := range c.contextProxies {
+		context := contextProxy.context
+		clusters = append(clusters, *context.getCluster())
+	}
+
+	return clusters
+}
+
+func (c *HeadlampConfig) createProxyForContext(context Context) (*httputil.ReverseProxy, error) {
 	cluster := context.getCluster()
 	name := cluster.getName()
 
 	server, err := url.Parse(*cluster.getServer())
 	if err != nil {
-		log.Fatal("Failed to get URL from server", name, err)
+		return nil, fmt.Errorf("failed to get URL from server %s: %w", *name, err)
 	}
 
 	// Create a reverse proxy to direct the API calls to the right server
@@ -412,9 +489,12 @@ func (c *HeadlampConfig) addProxyForContext(context *Context, r *mux.Router) {
 
 	shouldVerifyTLS := !c.insecure || cluster.shouldVerifyTLS()
 	if shouldVerifyTLS {
-		if certificate := cluster.getCAData(); certificate != nil {
-			rootCAs.AppendCertsFromPEM(certificate)
+		certificate, err := cluster.getCAData()
+		if err != nil {
+			return nil, err
 		}
+
+		rootCAs.AppendCertsFromPEM(certificate)
 	}
 
 	var certs []tls.Certificate
@@ -425,7 +505,7 @@ func (c *HeadlampConfig) addProxyForContext(context *Context, r *mux.Router) {
 	if clientCert != "" {
 		clientKey := context.getClientKey()
 		if clientKey == "" {
-			log.Fatalf("Found a ClientCertificate entry for cluster %v, but not a ClientKey.", name)
+			return nil, fmt.Errorf("found a ClientCertificate entry, but not a ClientKey")
 		} else if cert, err := tls.LoadX509KeyPair(clientCert, clientKey); err == nil {
 			certs = append(certs, cert)
 		}
@@ -435,24 +515,21 @@ func (c *HeadlampConfig) addProxyForContext(context *Context, r *mux.Router) {
 	if clientCertData != nil {
 		clientKeyData := context.getClientKeyData()
 		if clientKeyData == nil {
-			log.Fatalf("Found a ClientCertificateData entry for cluster %v, but not a ClientKeyData.", name)
+			return nil, fmt.Errorf("found a ClientCertificateData entry, but not a ClientKeyData")
 		} else if cert, err := tls.X509KeyPair(clientCertData, clientKeyData); err == nil {
 			certs = append(certs, cert)
 		}
 	}
 
 	tls := &tls.Config{
-		InsecureSkipVerify: shouldVerifyTLS, // nolint:gosec
+		InsecureSkipVerify: shouldVerifyTLS, //nolint:gosec
 		RootCAs:            rootCAs,
 		Certificates:       certs,
 	}
 
 	proxy.Transport = &http.Transport{TLSClientConfig: tls}
 
-	prefix := "/clusters/" + *name
-
-	r.HandleFunc(prefix+"/{api:.*}", proxyHandler(server, proxy))
-	fmt.Printf("\tlocalhost:%v%v%v/{api...} -> %v\n", c.port, c.baseURL, prefix, *cluster.getServer())
+	return proxy, nil
 }
 
 func setPluginReloadHeader(writer http.ResponseWriter) {
@@ -483,21 +560,84 @@ func proxyHandler(url *url.URL, proxy *httputil.ReverseProxy) func(http.Response
 	}
 }
 
-func GetDefaultKubeConfigPath() string {
-	user, err := user.Current()
-	if err != nil {
-		log.Fatalf(err.Error())
-	}
-
-	homeDirectory := user.HomeDir
-
-	return filepath.Join(homeDirectory, ".kube", "config")
-}
-
-func (c *clientConfig) getConfig(w http.ResponseWriter, r *http.Request) {
+func (c *HeadlampConfig) getConfig(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	if err := json.NewEncoder(w).Encode(c); err != nil {
+	clientConfig := clientConfig{c.getClusters()}
+
+	if err := json.NewEncoder(w).Encode(&clientConfig); err != nil {
 		log.Println("Error encoding config", err)
 	}
+}
+
+func (c *HeadlampConfig) addClusterSetupRoute(r *mux.Router) {
+	// We do not support this feature when in-cluster
+	if c.useInCluster {
+		return
+	}
+
+	r.HandleFunc("/cluster", func(w http.ResponseWriter, r *http.Request) {
+		clusterReq := ClusterReq{}
+		if err := json.NewDecoder(r.Body).Decode(&clusterReq); err != nil {
+			fmt.Println(err)
+			http.Error(w, "Error decoding cluster info", http.StatusBadRequest)
+			return
+		}
+
+		if clusterReq.Name == "" || clusterReq.Server == "" {
+			http.Error(w, "Error creating cluster with invalid info; please provide a 'name' and 'server' fields at least.",
+				http.StatusBadRequest)
+			return
+		}
+
+		context := Context{
+			Name: clusterReq.Name,
+			cluster: Cluster{
+				Name:   clusterReq.Name,
+				Server: clusterReq.Server,
+				config: &clientcmdapi.Cluster{
+					Server:                   clusterReq.Server,
+					InsecureSkipTLSVerify:    clusterReq.InsecureSkipTLSVerify,
+					CertificateAuthorityData: clusterReq.CertificateAuthorityData,
+				},
+			},
+		}
+
+		proxy, err := c.createProxyForContext(context)
+		if err != nil {
+			log.Printf("Error creating proxy for cluster %s: %s", clusterReq.Name, err)
+			http.Error(w, "Error setting up cluster", http.StatusBadRequest)
+			return
+		}
+
+		_, isReplacement := c.contextProxies[clusterReq.Name]
+
+		c.contextProxies[clusterReq.Name] = contextProxy{
+			&context,
+			proxy,
+		}
+
+		if isReplacement {
+			fmt.Printf("Replaced cluster \"%s\" proxy by:\n", context.Name)
+		} else {
+			fmt.Println("Created new cluster proxy:")
+		}
+		fmt.Printf("\tlocalhost:%d%s%s/{api...} -> %s\n", c.port, c.baseURL, "/clusters/"+context.Name, clusterReq.Server)
+
+		w.WriteHeader(http.StatusCreated)
+		c.getConfig(w, r)
+	}).Methods("POST")
+}
+
+func absPath(path string) (string, error) {
+	if !strings.HasPrefix(path, "~/") {
+		return path, nil
+	}
+
+	currentUser, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(currentUser.HomeDir, path[2:]), nil
 }
